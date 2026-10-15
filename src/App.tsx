@@ -1,4 +1,4 @@
-/* Main App Component - Handles routing (using react-router-dom), auth, theme and query providers */
+/* Main App Component - Handles routing (using react-router-dom), auth, theme and query providers (Phase 3 verified) */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
