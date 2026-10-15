@@ -10,6 +10,7 @@ import {
   Sparkles,
   ShieldCheck,
   AlertTriangle,
+  ArrowRight,
 } from 'lucide-react'
 import { CoursesService } from '@/services/coursesService'
 import { TrackDetail, TrackModule } from '@/data/demoData'
@@ -276,15 +277,45 @@ export default function TrackVisualMapPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 flex items-center justify-between border-t border-border text-[11px] font-mono text-muted-foreground">
+                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border text-[11px] font-mono text-muted-foreground">
                       <span>Estimativa: {mod.estimatedHours} horas de dedicação</span>
                       {isCurrent && track.hasEntitlement && (
                         <span className="text-[#01B59A] font-semibold flex items-center gap-1">
                           <Sparkles className="h-3 w-3" />
-                          Próxima atividade recomendada
+                          Próxima etapa ativa
                         </span>
                       )}
                     </div>
+
+                    {/* Acesso à MISSÃO INTERATIVA Canônica de Resistência dos Materiais */}
+                    {mod.id === 'mod-2' && track.hasEntitlement && (
+                      <div className="mt-3 p-3 rounded-xl border border-[#01B59A]/40 bg-[#01B59A]/10 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase font-bold text-[#01B59A]">
+                              <Sparkles className="h-3 w-3" /> Missão Interativa Prática
+                            </span>
+                            <h4 className="text-xs sm:text-sm font-bold text-foreground">
+                              Resistência dos Materiais — Flexão de Vigas
+                            </h4>
+                            <p className="text-[11px] text-muted-foreground">
+                              5 exercícios progressivos com calculadora técnica e verificação de
+                              tensões.
+                            </p>
+                          </div>
+
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-mono font-bold text-xs shrink-0 h-8"
+                          >
+                            <Link to="/app/atividade/mis-resmat-flexao-01">
+                              Iniciar Missão <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

@@ -39,6 +39,7 @@ import { AdminQuestionBankPage } from '@/pages/admin/AdminQuestionBankPage'
 import { AdminMediaPage } from '@/pages/admin/AdminMediaPage'
 import { AdminEditorialReviewPage } from '@/pages/admin/AdminEditorialReviewPage'
 import { LearnerBlockViewerPage } from '@/pages/learner/LearnerBlockViewerPage'
+import ActivityPlayerPage from '@/pages/learner/ActivityPlayerPage'
 
 export default function App() {
   return (
@@ -135,6 +136,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="student">
                       <LearnerBlockViewerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app/atividade/:id"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <ActivityPlayerPage />
                     </ProtectedRoute>
                   }
                 />

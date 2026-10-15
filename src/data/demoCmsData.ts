@@ -1,4 +1,128 @@
 import { MediaAsset, QuestionBankItem, ContentBlock, EditorialReviewItem } from '@/types/cms'
+import { BEAM_BENDING_EXERCISES } from '@/data/beamBendingMissionData'
+
+/**
+ * Converte os exercícios canônicos da Missão em QuestionBankItems completos
+ * para que administradores e editores possam localizá-los e editá-los no Banco de Questões.
+ */
+const CANONICAL_MISSION_QUESTIONS: QuestionBankItem[] = BEAM_BENDING_EXERCISES.map((item, idx) => {
+  const { studentPayload, privateKey } = item
+  return {
+    id: `qst-mission-${idx + 1}`,
+    externalId: studentPayload.externalId,
+    title: studentPayload.title,
+    questionType:
+      studentPayload.type === 'engineering_decision'
+        ? 'single_choice'
+        : (studentPayload.type as any),
+    subjectArea: studentPayload.subjectArea,
+    competencyCode: studentPayload.competencyCode,
+    prerequisites: ['Resistência dos Materiais I', 'Equações de Equilíbrio'],
+    authoringLevel: (idx + 1) as 1 | 2 | 3 | 4 | 5,
+    promptMarkdown: studentPayload.promptMarkdown,
+    options: (studentPayload.options || []).map((opt) => ({
+      id: opt.id,
+      label: opt.label,
+      textMarkdown: opt.textMarkdown,
+      distractorRationale: privateKey.distractorRationales?.[opt.id],
+    })),
+    privateKey: {
+      correctOptionIds: privateKey.correctOptionIds,
+      numericExpectedValue: privateKey.numericExpectedValue,
+      numericToleranceAbs: privateKey.numericToleranceAbs,
+      numericToleranceRel: privateKey.numericToleranceRel,
+      numericUnit: privateKey.numericUnit || studentPayload.numericUnit,
+      rubricNotes: privateKey.rubricNotes,
+    },
+    hint: studentPayload.hints[0]?.textMarkdown,
+    explanationMarkdown: privateKey.explanationMarkdown,
+    numericUnit: studentPayload.numericUnit,
+    numericToleranceAbs: privateKey.numericToleranceAbs,
+    numericToleranceRel: privateKey.numericToleranceRel,
+    estimatedSeconds: studentPayload.estimatedSeconds,
+    xpReward: studentPayload.xpRewardBase,
+    tags: ['Missão', 'Resistência dos Materiais', 'Flexão de Vigas', 'Canônico'],
+    editorialStatus: 'published',
+    version: 1,
+    reviewedBy: 'Coord. Dra. Mariana Bittencourt',
+    reviewedAt: '2025-02-25T10:00:00Z',
+    createdAt: '2025-02-25T09:00:00Z',
+    updatedAt: '2025-02-25T10:00:00Z',
+    telemetryStats: {
+      totalAttempts: 120,
+      accuracyRate: 72.5,
+      isContested: false,
+      perceivedDifficulty: 'adequada',
+      isPendingTelemetry: true,
+    },
+    isDemo: true,
+  }
+})
+
+/**
+ * Cria blocos no ContentBlock para a missão
+ */
+const CANONICAL_MISSION_BLOCKS: ContentBlock[] = [
+  {
+    id: 'blk-mis-flexao-01',
+    blockType: 'single_choice',
+    category: 'assessment',
+    title: 'Missão Interativa: Flexão de Vigas (Exercício 1 — Hipótese de Navier)',
+    description: 'Questão conceitual com fórmulas de flexão e alternativas justificadas.',
+    editorialStatus: 'published',
+    version: 1,
+    completionPolicy: 'submitted',
+    tags: ['Missão', 'Flexão', 'Navier'],
+    referencedQuestionId: 'qst-mission-1',
+    config: {
+      prompt: BEAM_BENDING_EXERCISES[0].studentPayload.promptMarkdown,
+      options: BEAM_BENDING_EXERCISES[0].studentPayload.options,
+      correctOptionId: 'opt-1-a',
+      explanation: BEAM_BENDING_EXERCISES[0].privateKey.explanationMarkdown,
+    },
+    createdByName: 'Coord. Dra. Mariana Bittencourt',
+    createdAt: '2025-02-25T09:00:00Z',
+    updatedAt: '2025-02-25T09:00:00Z',
+    trackReferences: [
+      {
+        courseTitle: 'Formação Contínua: Fundamentos e Pensamento Divergente',
+        courseSlug: 'formacao-continua-introdutoria',
+        moduleTitle: 'Módulo 02 — Mecânica dos Sólidos: Da Teoria ao Campo',
+      },
+    ],
+    isDemo: true,
+  },
+  {
+    id: 'blk-mis-flexao-02',
+    blockType: 'numeric_response',
+    category: 'assessment',
+    title: 'Missão Interativa: Flexão de Vigas (Exercício 2 — Módulo Resistente W)',
+    description: 'Cálculo de tensão normal máxima com tolerância e unidade em MPa.',
+    editorialStatus: 'published',
+    version: 1,
+    completionPolicy: 'submitted',
+    tags: ['Missão', 'Flexão', 'Numérico', 'Módulo Resistente'],
+    referencedQuestionId: 'qst-mission-2',
+    config: {
+      prompt: BEAM_BENDING_EXERCISES[1].studentPayload.promptMarkdown,
+      expectedValue: 25.0,
+      toleranceAbs: 0.5,
+      unit: 'MPa',
+      explanation: BEAM_BENDING_EXERCISES[1].privateKey.explanationMarkdown,
+    },
+    createdByName: 'Coord. Dra. Mariana Bittencourt',
+    createdAt: '2025-02-25T09:00:00Z',
+    updatedAt: '2025-02-25T09:00:00Z',
+    trackReferences: [
+      {
+        courseTitle: 'Formação Contínua: Fundamentos e Pensamento Divergente',
+        courseSlug: 'formacao-continua-introdutoria',
+        moduleTitle: 'Módulo 02 — Mecânica dos Sólidos: Da Teoria ao Campo',
+      },
+    ],
+    isDemo: true,
+  },
+]
 
 /**
  * Dataset Central de Demonstração para a Fase 2 (CMS & Multimídia)
@@ -121,6 +245,7 @@ export const INITIAL_DEMO_MEDIA_ASSETS: MediaAsset[] = [
 ]
 
 export const INITIAL_DEMO_QUESTIONS: QuestionBankItem[] = [
+  ...CANONICAL_MISSION_QUESTIONS,
   {
     id: 'qst-001',
     externalId: 'MEF-L3-Q001',
@@ -355,6 +480,7 @@ Em vigas hiperestáticas feitas de material dúctil com capacidade de deformaç�
 ]
 
 export const INITIAL_DEMO_BLOCKS: ContentBlock[] = [
+  ...CANONICAL_MISSION_BLOCKS,
   {
     id: 'blk-001',
     blockType: 'single_choice',
