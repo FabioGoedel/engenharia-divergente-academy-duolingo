@@ -1,0 +1,175 @@
+/* Global styles - Theme, font, utilities, animations and Engenharia Divergente design system tokens */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base theme (Light mode - accessible WCAG AA) */
+    --background: 204 14% 96%; /* #F4F6F7 */
+    --foreground: 202 29% 10%; /* #111A1F */
+
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 202 29% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 202 29% 10%;
+
+    /* Turquesa principal #01B59A -> HSL ~171, 99%, 36% */
+    --primary: 171 99% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 204 14% 92%; /* #E8ECEE */
+    --secondary-foreground: 202 29% 10%;
+
+    --muted: 204 14% 92%;
+    --muted-foreground: 202 12% 42%; /* #687982 */
+
+    --accent: 171 99% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 6 52% 58%; /* #C86F63 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 204 14% 86%;
+    --input: 204 14% 86%;
+    --ring: 171 99% 36%;
+
+    --radius: 0.875rem; /* 14px */
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 202 29% 10%;
+    --sidebar-primary: 171 99% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 204 14% 94%;
+    --sidebar-accent-foreground: 202 29% 10%;
+    --sidebar-border: 204 14% 88%;
+    --sidebar-ring: 171 99% 36%;
+
+    /* Brand Tokens Verbatim */
+    --ediv-black: #000000;
+    --ediv-white: #ffffff;
+    --ediv-turquoise: #01b59a;
+    --ediv-turquoise-hover: #00a88f;
+    --ediv-dark-bg: #0c1317;
+    --ediv-surface: #152228;
+    --ediv-surface-elevated: #1b2830;
+    --ediv-border: #294149;
+    --ediv-secondary-text: #a8bbc0;
+    --ediv-success: #1d957a;
+    --ediv-warning: #c69b4b;
+    --ediv-error: #c86f63;
+
+    --chart-1: 171 99% 36%;
+    --chart-2: 215 16% 47%;
+    --chart-3: 38 54% 53%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 165 67% 35%;
+  }
+
+  .dark {
+    /* Dark Theme Default: #0C1317 app base, #152228 surface, #294149 border */
+    --background: 203 32% 7%; /* #0C1317 */
+    --foreground: 203 16% 92%; /* #E6EAED */
+
+    --card: 203 31% 12%; /* #152228 */
+    --card-foreground: 203 16% 92%;
+
+    --popover: 203 31% 12%;
+    --popover-foreground: 203 16% 92%;
+
+    --primary: 171 99% 36%; /* #01B59A */
+    --primary-foreground: 203 32% 7%;
+
+    --secondary: 203 28% 15%; /* #1B2830 */
+    --secondary-foreground: 203 16% 92%;
+
+    --muted: 203 28% 15%;
+    --muted-foreground: 191 16% 70%; /* #A8BBC0 */
+
+    --accent: 171 99% 36%;
+    --accent-foreground: 203 32% 7%;
+
+    --destructive: 6 52% 58%; /* #C86F63 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 195 28% 22%; /* #294149 */
+    --input: 195 28% 22%;
+    --ring: 171 99% 36%;
+
+    --sidebar-background: 203 32% 7%; /* #0C1317 */
+    --sidebar-foreground: 203 16% 92%;
+    --sidebar-primary: 171 99% 36%;
+    --sidebar-primary-foreground: 203 32% 7%;
+    --sidebar-accent: 203 31% 12%;
+    --sidebar-accent-foreground: 203 16% 92%;
+    --sidebar-border: 195 28% 22%;
+    --sidebar-ring: 171 99% 36%;
+
+    --chart-1: 171 99% 36%;
+    --chart-2: 215 20% 65%;
+    --chart-3: 38 54% 53%;
+    --chart-4: 262 83% 66%;
+    --chart-5: 165 67% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* NEVER REMOVE THIS */
+  section[aria-label='Notifications alt+T'] {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+@layer utilities {
+  .pulse-subtle {
+    animation: pulse-subtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-subtle {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+
+  .fade-in-up {
+    animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
