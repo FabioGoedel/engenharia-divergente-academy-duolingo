@@ -33,6 +33,7 @@ import { SanitizedMarkdownViewer, MathFormula } from '@/components/cms/Sanitized
 import { EngineeringCalculator } from '@/components/calculator/EngineeringCalculator'
 import { useToast } from '@/hooks/use-toast'
 import { runAcademyEngineeringTests, TestResult } from '@/lib/testRunner'
+import { runPhase3AutomatedTests, Phase3TestReport } from '@/lib/phase3TestRunner'
 
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -66,6 +67,7 @@ export const ActivityPlayerPage: React.FC = () => {
     passedCount?: number
     failedCount?: number
     results?: TestResult[]
+    phase3Results?: Phase3TestReport[]
   }>({ running: false })
 
   const handleRunDiagnostics = async () => {
@@ -73,12 +75,18 @@ export const ActivityPlayerPage: React.FC = () => {
     setShowTestsModal(true)
     try {
       const outcome = await runAcademyEngineeringTests()
+      const p3Results = await runPhase3AutomatedTests()
+      const p3Passed = p3Results.every((r) => r.passed)
+      const totalPassed = outcome.passedCount + p3Results.filter((r) => r.passed).length
+      const totalFailed = outcome.failedCount + p3Results.filter((r) => !r.passed).length
+
       setTestSummary({
         running: false,
-        allPassed: outcome.allPassed,
-        passedCount: outcome.passedCount,
-        failedCount: outcome.failedCount,
+        allPassed: outcome.allPassed && p3Passed,
+        passedCount: totalPassed,
+        failedCount: totalFailed,
         results: outcome.results,
+        phase3Results: p3Results,
       })
     } catch {
       setTestSummary({ running: false, allPassed: false, failedCount: 1 })
@@ -796,6 +804,9 @@ export const ActivityPlayerPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
+                    <p className="text-[10px] text-[#A8BBC0] uppercase tracking-wider font-bold">
+                      Fases 1 e 2 — Motor de Cálculo e Schemas:
+                    </p>
                     {testSummary.results.map((r, i) => (
                       <div
                         key={i}
@@ -811,6 +822,30 @@ export const ActivityPlayerPage: React.FC = () => {
                         )}
                       </div>
                     ))}
+
+                    {testSummary.phase3Results && (
+                      <>
+                        <p className="text-[10px] text-[#01B59A] uppercase tracking-wider font-bold pt-2">
+                          Fase 3 — Motor de Progressão e Editor de Trilhas:
+                        </p>
+                        {testSummary.phase3Results.map((r) => (
+                          <div
+                            key={r.testId}
+                            className="flex items-start justify-between gap-2 p-2 rounded bg-[#152228] border border-[#294149]/60"
+                          >
+                            <div>
+                              <span className="text-[11px] text-white block">{r.title}</span>
+                              <span className="text-[10px] text-[#A8BBC0] block">{r.details}</span>
+                            </div>
+                            {r.passed ? (
+                              <span className="text-[#01B59A] font-bold shrink-0">PASS</span>
+                            ) : (
+                              <span className="text-[#C86F63] font-bold shrink-0">FAIL</span>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               ) : null}

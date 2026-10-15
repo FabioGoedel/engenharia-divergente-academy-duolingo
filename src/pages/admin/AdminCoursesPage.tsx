@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Link } from 'react-router-dom'
 import { AdminService } from '@/services/adminService'
 import { AdminCourseRow } from '@/data/demoData'
 import { useToast } from '@/hooks/use-toast'
@@ -165,18 +166,12 @@ export default function AdminCoursesPage() {
 
                   <td className="py-3.5 px-4 text-right">
                     <Button
+                      asChild
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        toast({
-                          title: 'Editor de Conteúdo CMS',
-                          description:
-                            'Status: PENDENTE (Fase 2). O editor avançado de módulos será construído na próxima fase.',
-                        })
-                      }
-                      className="text-xs text-muted-foreground hover:text-foreground h-7"
+                      className="text-xs text-[#01B59A] hover:text-[#01B59A] hover:bg-[#01B59A]/10 h-7"
                     >
-                      Editar Ementa
+                      <Link to={`/admin/trilhas/editor/${c.slug}`}>Abrir Editor Visual</Link>
                     </Button>
                   </td>
                 </tr>

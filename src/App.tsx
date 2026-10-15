@@ -40,6 +40,7 @@ import { AdminMediaPage } from '@/pages/admin/AdminMediaPage'
 import { AdminEditorialReviewPage } from '@/pages/admin/AdminEditorialReviewPage'
 import { AdminImportPage } from '@/pages/admin/AdminImportPage'
 import { AdminAiGeneratorToolsPage } from '@/pages/admin/AdminAiGeneratorToolsPage'
+import AdminTrailEditorPage from '@/pages/admin/AdminTrailEditorPage'
 import { LearnerBlockViewerPage } from '@/pages/learner/LearnerBlockViewerPage'
 import ActivityPlayerPage from '@/pages/learner/ActivityPlayerPage'
 
@@ -177,6 +178,14 @@ export default function App() {
 
                 {/* 3. Rotas do Admin (/admin/* protegidas por RBAC) */}
                 <Route path="/admin" element={<Navigate to="/admin/painel" replace />} />
+                <Route
+                  path="/admin/trilhas/editor/:id"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminTrailEditorPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/admin/importar"
                   element={

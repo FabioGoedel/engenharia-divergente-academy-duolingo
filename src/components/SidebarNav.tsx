@@ -55,10 +55,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
 
   // Gestão executiva — restrita a admin e super_admin (content_editor NÃO acessa)
   const adminLinks = [
+    {
+      to: '/admin/trilhas/editor/track-resmat-flexao',
+      label: 'Editor Visual de Trilhas',
+      icon: Sparkles,
+    },
+    { to: '/admin/cursos', label: 'Cursos & Trilhas', icon: BookOpen },
     { to: '/admin/importar', label: 'Importação em Massa', icon: UploadCloud },
     { to: '/admin/painel', label: 'Painel Admin', icon: BarChart3 },
     { to: '/admin/alunos', label: 'Gestão de Alunos', icon: Users },
-    { to: '/admin/cursos', label: 'Cursos & Trilhas', icon: BookOpen },
     { to: '/admin/matriculas', label: 'Matrículas & Entitlements', icon: FileSpreadsheet },
     { to: '/admin/relatorios', label: 'Relatórios & Roadmap', icon: ShieldCheck },
   ]
