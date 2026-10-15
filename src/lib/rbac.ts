@@ -36,13 +36,7 @@ export type Permission =
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   student: ['view_catalog', 'access_enrolled_content', 'view_certificates'],
-  content_editor: [
-    'view_catalog',
-    'access_enrolled_content',
-    'view_certificates',
-    'edit_content',
-    'publish_courses',
-  ],
+  content_editor: ['view_catalog', 'access_enrolled_content', 'view_certificates', 'edit_content'],
   admin: [
     'view_catalog',
     'access_enrolled_content',

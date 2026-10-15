@@ -18,7 +18,7 @@ import {
   VersionSnapshot,
 } from '@/types/cms'
 import { INITIAL_DEMO_QUESTIONS } from '@/data/demoCmsData'
-import { Role } from '@/lib/rbac'
+import { Role, isAdminRole } from '@/lib/rbac'
 import { parseBrazilianNumericInput } from '@/schemas/canonicalSchemas'
 
 const QUESTIONS_STORAGE_KEY = 'academy_demo_question_bank'
@@ -66,6 +66,12 @@ export const QuestionBankService = {
   assertEditorialAccess(role?: Role | null): void {
     if (!role || (role !== 'content_editor' && role !== 'admin' && role !== 'super_admin')) {
       throw new Error('Acesso negado: privilégios editoriais necessários.')
+    }
+  },
+
+  assertPublishAccess(role?: Role | null): void {
+    if (!role || !isAdminRole(role)) {
+      throw new Error('Acesso negado: publicação final restrita a administradores.')
     }
   },
 
@@ -333,7 +339,7 @@ export const QuestionBankService = {
     reviewerName: string,
     userRole?: Role | null,
   ): Promise<{ success: boolean; question?: QuestionBankItem; errors?: string[] }> {
-    this.assertEditorialAccess(userRole)
+    this.assertPublishAccess(userRole)
 
     const q = await this.getById(id)
     if (!q) return { success: false, errors: ['Questão não encontrada.'] }

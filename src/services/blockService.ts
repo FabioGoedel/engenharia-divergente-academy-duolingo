@@ -12,7 +12,7 @@
 import { ContentBlock, EditorialStatus, VersionSnapshot, BlockTypeId } from '@/types/cms'
 import { INITIAL_DEMO_BLOCKS } from '@/data/demoCmsData'
 import { getBlockDefinition } from '@/components/cms/BlockRegistry'
-import { Role } from '@/lib/rbac'
+import { Role, isAdminRole } from '@/lib/rbac'
 
 const BLOCKS_STORAGE_KEY = 'academy_demo_content_blocks'
 const BLOCK_VERSIONS_STORAGE_KEY = 'academy_demo_block_versions'
@@ -59,6 +59,12 @@ export const BlockService = {
   assertEditorialAccess(role?: Role | null): void {
     if (!role || (role !== 'content_editor' && role !== 'admin' && role !== 'super_admin')) {
       throw new Error('Acesso negado: privilégios editoriais necessários.')
+    }
+  },
+
+  assertPublishAccess(role?: Role | null): void {
+    if (!role || !isAdminRole(role)) {
+      throw new Error('Acesso negado: publicação final restrita a administradores.')
     }
   },
 
@@ -194,7 +200,7 @@ export const BlockService = {
     publisherName: string,
     userRole?: Role | null,
   ): Promise<{ success: boolean; block?: ContentBlock; errors?: string[] }> {
-    this.assertEditorialAccess(userRole)
+    this.assertPublishAccess(userRole)
 
     const block = await this.getById(id)
     if (!block) return { success: false, errors: ['Bloco não encontrado.'] }

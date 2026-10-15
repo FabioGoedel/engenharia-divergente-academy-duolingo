@@ -16,6 +16,7 @@ import {
   Filter,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { isAdminRole } from '@/lib/rbac'
 import { QuestionBankItem, QuestionType, EditorialStatus } from '@/types/cms'
 import { QuestionBankService } from '@/services/questionBankService'
 import { ReviewWorkflowService } from '@/services/reviewWorkflowService'
@@ -37,6 +38,7 @@ import { SanitizedMarkdownViewer, MathFormula } from '@/components/cms/Sanitized
 export const AdminQuestionBankPage: React.FC = () => {
   const { user } = useAuth()
   const { toast } = useToast()
+  const canPublish = user?.role ? isAdminRole(user.role) : false
 
   const [questions, setQuestions] = useState<QuestionBankItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -453,7 +455,7 @@ export const AdminQuestionBankPage: React.FC = () => {
                       <Send className="h-3 w-3 mr-1" /> Submeter para Revisão
                     </Button>
                   )}
-                  {q.editorialStatus === 'in_review' && (
+                  {q.editorialStatus === 'in_review' && canPublish && (
                     <Button
                       size="sm"
                       onClick={() => handlePublishDirect(q)}

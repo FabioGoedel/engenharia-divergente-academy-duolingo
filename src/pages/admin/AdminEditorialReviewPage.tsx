@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { isAdminRole } from '@/lib/rbac'
 import { EditorialReviewItem, EditorialStatus } from '@/types/cms'
 import { ReviewWorkflowService } from '@/services/reviewWorkflowService'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ import { useToast } from '@/hooks/use-toast'
 export const AdminEditorialReviewPage: React.FC = () => {
   const { user } = useAuth()
   const { toast } = useToast()
+  const canPublish = user?.role ? isAdminRole(user.role) : false
 
   const [queue, setQueue] = useState<EditorialReviewItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -233,16 +235,25 @@ export const AdminEditorialReviewPage: React.FC = () => {
                   >
                     <XCircle className="h-3.5 w-3.5 mr-1" /> Rejeitar / Ajustes
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setSelectedItem(item)
-                      setIsApproveOpen(true)
-                    }}
-                    className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-semibold text-xs h-8"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Homologar & Publicar
-                  </Button>
+                  {canPublish ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedItem(item)
+                        setIsApproveOpen(true)
+                      }}
+                      className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-semibold text-xs h-8"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Homologar & Publicar
+                    </Button>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-[#C69B4B]/50 text-[#C69B4B] py-1"
+                    >
+                      Aguardando aprovação de admin
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>

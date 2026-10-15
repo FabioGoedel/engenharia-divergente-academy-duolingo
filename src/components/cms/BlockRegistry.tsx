@@ -495,46 +495,177 @@ const PLANNED_BLOCKS: Array<{
   category: BlockCategory
   priority: BlockPriority
 }> = [
+  // --- P1 (Especificação Técnica §5) ---
   {
-    type: 'code_runner',
-    title: 'Executor Python / Julia In-Browser',
-    description: 'Execução de scripts numéricos com NumPy/SciPy para montagem de matrizes.',
+    type: 'match_pairs',
+    title: 'Associação de Pares (Match Pairs)',
+    description:
+      'Associação conceitual bilateral entre conceitos, fórmulas e aplicações de engenharia.',
+    category: 'assessment',
+    priority: 'P1',
+  },
+  {
+    type: 'fill_equation',
+    title: 'Preenchimento de Equação (Fill Equation)',
+    description: 'Complementação de lacunas em relações constitutivas e deduções matemáticas.',
+    category: 'assessment',
+    priority: 'P1',
+  },
+  {
+    type: 'hotspot_image',
+    title: 'Imagem com Pontos de Interesse (Hotspot Image)',
+    description:
+      'Identificação visual interativa de pontos críticos, singularidades e condições de contorno.',
     category: 'interaction',
     priority: 'P1',
   },
   {
-    type: 'simulation_embed',
-    title: 'Visualizador Interativo WebGL / 3D',
-    description: 'Interação com geometria CAD e campos de deformação tridimensionais.',
+    type: 'drag_drop',
+    title: 'Arrastar e Soltar (Drag & Drop)',
+    description:
+      'Posicionamento e classificação interativa de componentes mecânicos e estruturais.',
+    category: 'interaction',
+    priority: 'P1',
+  },
+  {
+    type: 'compare_models',
+    title: 'Comparador de Modelos (Compare Models)',
+    description:
+      'Análise comparativa lado a lado entre formulações analíticas e simulações numéricas.',
+    category: 'interaction',
+    priority: 'P1',
+  },
+  {
+    type: 'error_detection',
+    title: 'Detecção de Erros (Error Detection)',
+    description:
+      'Diagnóstico e auditoria técnica de inconsistências em memoriais de cálculo ou malhas.',
+    category: 'assessment',
+    priority: 'P1',
+  },
+  {
+    type: 'engineering_decision',
+    title: 'Decisão de Engenharia (Engineering Decision)',
+    description:
+      'Árvore de decisão situacional com trade-offs de segurança, custo e viabilidade técnica.',
+    category: 'interaction',
+    priority: 'P1',
+  },
+  {
+    type: 'mind_map',
+    title: 'Mapa Mental Técnico (Mind Map)',
+    description: 'Representação hierárquica e conexões entre disciplinas e normas aplicáveis.',
     category: 'media',
     priority: 'P1',
   },
   {
-    type: 'audio_player',
-    title: 'Podcast Técnico / Aula em Áudio',
-    description: 'Discussão de laudos periciais e investigações de campo em áudio imersivo.',
+    type: 'flashcards',
+    title: 'Cartões de Memorização Ativa (Flashcards)',
+    description:
+      'Revisão espaçada de conceitos-chave, critérios de escoamento e definições normativas.',
+    category: 'interaction',
+    priority: 'P1',
+  },
+  {
+    type: 'audio',
+    title: 'Áudio / Explicação Falada (Audio)',
+    description: 'Comentários técnicos e laudos periciais explicados em formato de áudio imersivo.',
+    category: 'media',
+    priority: 'P1',
+  },
+  {
+    type: 'download',
+    title: 'Download de Recursos (Download)',
+    description: 'Disponibilização de planilhas, scripts e arquivos de suporte para o aluno.',
+    category: 'media',
+    priority: 'P1',
+  },
+  {
+    type: 'competency_assessment',
+    title: 'Avaliação de Competência (Competency Assessment)',
+    description:
+      'Diagnóstico situacional do nível de maturidade e domínio técnico da matriz de competências.',
+    category: 'assessment',
+    priority: 'P1',
+  },
+  {
+    type: 'adaptive_review',
+    title: 'Revisão Adaptativa (Adaptive Review)',
+    description:
+      'Trilha dinâmica de reforço baseada nos gaps diagnosticados nas questões anteriores.',
+    category: 'flow',
+    priority: 'P1',
+  },
+  {
+    type: 'ai_tutor',
+    title: 'Tutor de Inteligência Artificial (AI Tutor)',
+    description:
+      'Assistência pedagógica com foco socrático e embasamento nas normas e memoriais do curso.',
+    category: 'interaction',
+    priority: 'P1',
+  },
+
+  // --- P2 (Especificação Técnica §5) ---
+  {
+    type: 'beam_load_simulator',
+    title: 'Simulador de Cargas em Vigas (Beam Load Simulator)',
+    description:
+      'Simulação interativa de diagramas de momento fletor e esforço cortante sob carregamentos.',
+    category: 'interaction',
+    priority: 'P2',
+  },
+  {
+    type: 'stress_contour_interpretation',
+    title: 'Interpretação de Contorno de Tensões (Stress Contour Interpretation)',
+    description:
+      'Leitura crítica de franjas de tensão de von Mises e identificação de artefatos numéricos.',
+    category: 'interaction',
+    priority: 'P2',
+  },
+  {
+    type: 'parameter_slider',
+    title: 'Controle Paramétrico Dinâmico (Parameter Slider)',
+    description: 'Ajuste de variáveis de projeto em tempo real com resposta imediata nos cálculos.',
+    category: 'interaction',
+    priority: 'P2',
+  },
+  {
+    type: 'graph_plotter',
+    title: 'Plotter Gráfico Interativo (Graph Plotter)',
+    description:
+      'Traçado de curvas tensão-deformação, convergência de malha e diagramas de equilíbrio.',
     category: 'media',
     priority: 'P2',
   },
   {
-    type: 'spreadsheet_view',
-    title: 'Planilha Paramétrica Integrada',
-    description: 'Tabelas dinâmicas com verificação de seções conforme NBR 8800 / NBR 6118.',
+    type: 'unit_conversion',
+    title: 'Conversor de Unidades de Engenharia (Unit Conversion)',
+    description:
+      'Validação e conversão consistente entre sistemas internacional e empírico de unidades.',
     category: 'interaction',
-    priority: 'P1',
+    priority: 'P2',
   },
   {
-    type: 'peer_review',
-    title: 'Revisão por Pares (Peer Review)',
-    description: 'Critérios de auditoria cruzada de memoriais de cálculo entre engenheiros.',
+    type: 'interactive_fbd',
+    title: 'Diagrama de Corpo Livre Interativo (Interactive FBD)',
+    description: 'Montagem visual e equilíbrio de forças e momentos sobre elementos mecânicos.',
+    category: 'interaction',
+    priority: 'P2',
+  },
+  {
+    type: 'external_lti_scorm_adapter',
+    title: 'Adaptador Externo LTI / SCORM (External LTI SCORM Adapter)',
+    description:
+      'Integração interoperável com laboratórios virtuais e pacotes legados de treinamento.',
     category: 'flow',
     priority: 'P2',
   },
   {
-    type: 'jupyter_lite',
-    title: 'Notebook Jupyter Integrado',
-    description: 'Ambiente completo de ciência de dados e otimização topológica.',
-    category: 'interaction',
+    type: 'rubric_free_text',
+    title: 'Resposta Discursiva com Rubrica (Rubric Free Text)',
+    description:
+      'Avaliação de memoriais e justificativas discursivas guiada por matriz de critérios técnicos.',
+    category: 'assessment',
     priority: 'P2',
   },
 ]

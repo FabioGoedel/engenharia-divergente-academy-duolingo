@@ -154,13 +154,30 @@ export type BlockTypeId =
   | 'milestone_video'
   | 'cta'
   | 'conditional_gate'
-  // P1/P2 - Registrados como "Planejado" no catálogo admin
-  | 'code_runner'
-  | 'simulation_embed'
-  | 'audio_player'
-  | 'spreadsheet_view'
-  | 'peer_review'
-  | 'jupyter_lite'
+  // P1 - Planejados (Especificação Técnica §5)
+  | 'match_pairs'
+  | 'fill_equation'
+  | 'hotspot_image'
+  | 'drag_drop'
+  | 'compare_models'
+  | 'error_detection'
+  | 'engineering_decision'
+  | 'mind_map'
+  | 'flashcards'
+  | 'audio'
+  | 'download'
+  | 'competency_assessment'
+  | 'adaptive_review'
+  | 'ai_tutor'
+  // P2 - Planejados (Especificação Técnica §5)
+  | 'beam_load_simulator'
+  | 'stress_contour_interpretation'
+  | 'parameter_slider'
+  | 'graph_plotter'
+  | 'unit_conversion'
+  | 'interactive_fbd'
+  | 'external_lti_scorm_adapter'
+  | 'rubric_free_text'
 
 export interface BlockTypeDefinition {
   type: BlockTypeId

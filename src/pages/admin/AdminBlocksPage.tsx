@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { isAdminRole } from '@/lib/rbac'
 import { ContentBlock, BlockTypeId, BlockCategory, EditorialStatus } from '@/types/cms'
 import { BlockService } from '@/services/blockService'
 import { ReviewWorkflowService } from '@/services/reviewWorkflowService'
@@ -36,6 +37,7 @@ import { useToast } from '@/hooks/use-toast'
 export const AdminBlocksPage: React.FC = () => {
   const { user } = useAuth()
   const { toast } = useToast()
+  const canPublish = user?.role ? isAdminRole(user.role) : false
 
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -366,13 +368,13 @@ export const AdminBlocksPage: React.FC = () => {
                         <Send className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    {b.editorialStatus === 'in_review' && (
+                    {b.editorialStatus === 'in_review' && canPublish && (
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => handlePublish(b)}
                         className="h-7 w-7 text-[#01B59A] hover:bg-[#01B59A]/10"
-                        title="Publicar Diretamente"
+                        title="Publicar Diretamente (Admin)"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                       </Button>

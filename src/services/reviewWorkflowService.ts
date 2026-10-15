@@ -11,7 +11,7 @@ import { EditorialReviewItem, EditorialStatus } from '@/types/cms'
 import { INITIAL_DEMO_REVIEWS } from '@/data/demoCmsData'
 import { QuestionBankService } from './questionBankService'
 import { BlockService } from './blockService'
-import { Role } from '@/lib/rbac'
+import { Role, isAdminRole } from '@/lib/rbac'
 
 const REVIEWS_STORAGE_KEY = 'academy_demo_editorial_reviews'
 
@@ -40,6 +40,12 @@ export const ReviewWorkflowService = {
   assertEditorialAccess(role?: Role | null): void {
     if (!role || (role !== 'content_editor' && role !== 'admin' && role !== 'super_admin')) {
       throw new Error('Acesso negado: privilégios editoriais necessários.')
+    }
+  },
+
+  assertPublishAccess(role?: Role | null): void {
+    if (!role || !isAdminRole(role)) {
+      throw new Error('Acesso negado: publicação final restrita a administradores.')
     }
   },
 
@@ -91,7 +97,7 @@ export const ReviewWorkflowService = {
     notes?: string,
     userRole?: Role | null,
   ): Promise<{ success: boolean; errors?: string[] }> {
-    this.assertEditorialAccess(userRole)
+    this.assertPublishAccess(userRole)
 
     const list = getStoredReviews()
     const item = list.find((r) => r.id === reviewId)

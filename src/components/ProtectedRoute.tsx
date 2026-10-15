@@ -13,7 +13,37 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   const { isAuthenticated, role, isLoading } = useAuth()
   const location = useLocation()
   const { toast } = useToast()
-  const [notified, setNotified] = React.useState(false)
+
+  const isEditorialRestricted = Boolean(
+    isAuthenticated &&
+    requiredRole === 'content_editor' &&
+    role &&
+    role !== 'content_editor' &&
+    !isAdminRole(role),
+  )
+
+  const isAdminRestricted = Boolean(
+    isAuthenticated && requiredRole === 'admin' && role && !isAdminRole(role),
+  )
+
+  React.useEffect(() => {
+    if (isLoading || !isAuthenticated) return
+
+    if (isEditorialRestricted) {
+      toast({
+        variant: 'destructive',
+        title: 'Acesso restrito à equipe editorial',
+        description: 'Seu papel atual não possui privilégios de edição de conteúdo.',
+      })
+    } else if (isAdminRestricted) {
+      toast({
+        variant: 'destructive',
+        title: 'Acesso restrito a administradores',
+        description:
+          'Seu papel atual não possui privilégios de gestão avançada. Redirecionando para o painel.',
+      })
+    }
+  }, [isLoading, isAuthenticated, isEditorialRestricted, isAdminRestricted, toast])
 
   if (isLoading) {
     return (
@@ -33,34 +63,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   }
 
   // Checagem de rota editorial (content_editor, admin, super_admin)
-  if (
-    requiredRole === 'content_editor' &&
-    role &&
-    role !== 'content_editor' &&
-    !isAdminRole(role)
-  ) {
-    if (!notified) {
-      setNotified(true)
-      toast({
-        variant: 'destructive',
-        title: 'Acesso restrito à equipe editorial',
-        description: 'Seu papel atual não possui privilégios de edição de conteúdo.',
-      })
-    }
+  if (isEditorialRestricted) {
     return <Navigate to="/app" replace />
   }
 
   // Checagem de rota administrativa estrita (apenas admin ou super_admin)
-  if (requiredRole === 'admin' && role && !isAdminRole(role)) {
-    if (!notified) {
-      setNotified(true)
-      toast({
-        variant: 'destructive',
-        title: 'Acesso restrito a administradores',
-        description:
-          'Seu papel atual não possui privilégios de gestão avançada. Redirecionando para o painel.',
-      })
-    }
+  if (isAdminRestricted) {
     return <Navigate to="/app" replace />
   }
 
