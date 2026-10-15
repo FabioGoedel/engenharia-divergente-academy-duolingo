@@ -12,6 +12,10 @@
 import { evaluateSafeMath, convertUnit, formatEngineeringNumber } from '@/lib/safeMathParser'
 import { parseBrazilianNumericInput } from '@/schemas/canonicalSchemas'
 import { ActivityService } from '@/services/activityService'
+import { ImportExportService, IMPORT_LIMITS } from '@/services/importExportService'
+import { DEMO_CANONICAL_PACKAGE } from '@/data/demoCanonicalPackage'
+import { BlockService } from '@/services/blockService'
+import { QuestionBankService } from '@/services/questionBankService'
 
 export interface TestResult {
   name: string
@@ -220,6 +224,243 @@ export async function runAcademyEngineeringTests(): Promise<{
       throw new Error(
         `Idempotência violada! XP foi concedido novamente: ${secondSubmission.xpAwardedInThisAction}`,
       )
+    }
+  })
+
+  // --- 6. TESTES DA ETAPA 1: SISTEMA DE IMPORTAÇÃO & INTEGRIDADE ---
+
+  // 6.1 Importação de bloco válido individual
+  await test('Importação: Bloco válido individual é aceito e estruturado como rascunho', async () => {
+    const singleBlockPayload = {
+      id: `blk-test-single-${Date.now()}`,
+      block_type: 'single_choice',
+      title: 'Teste de Flexão Pura',
+      category: 'assessment',
+      subject_area: 'Resistência dos Materiais',
+      associated_competencies: ['COMP-RES-01'],
+      initial_difficulty: 2,
+      estimated_minutes: 5,
+      config: {
+        prompt: 'Qual a tensão no eixo neutro?',
+        options: [
+          { id: 'opt-1', label: 'A', text: 'Zero', rationale: 'Eixo neutro tem tensão zero.' },
+        ],
+        correctOptionId: 'opt-1',
+        explanation: 'Por definição a linha neutra não sofre deformação axial.',
+      },
+      version: 1,
+    }
+
+    const testFile = new File([JSON.stringify(singleBlockPayload)], 'bloco_unitario.json', {
+      type: 'application/json',
+    })
+
+    const report = await ImportExportService.analyzeAndValidateFile(testFile, 'admin')
+    if (report.validItemsCount !== 1 || report.invalidItemsCount !== 0) {
+      throw new Error(
+        `Esperado 1 item válido, obtido ${report.validItemsCount} válidos e ${report.invalidItemsCount} inválidos`,
+      )
+    }
+
+    const execResult = await ImportExportService.executeImport(
+      report.items,
+      'bloco_unitario.json',
+      'admin',
+      'Admin Test',
+    )
+    if (execResult.importedBlocksCount !== 1) {
+      throw new Error(`Esperado 1 bloco importado, obtido ${execResult.importedBlocksCount}`)
+    }
+
+    // Verifica que entrou como draft
+    const importedBlock = await BlockService.getById(singleBlockPayload.id)
+    if (!importedBlock || importedBlock.editorialStatus !== 'draft') {
+      throw new Error('O bloco importado deve entrar estritamente com status draft!')
+    }
+  })
+
+  // 6.2 Importação de lote com pelo menos 100 blocos (requisito explícito)
+  await test('Importação em Lote: Lote com 100 blocos sintéticos analisado e validado com sucesso', async () => {
+    const batch100Blocks = Array.from({ length: 100 }, (_, i) => ({
+      id: `blk-batch-100-${i + 1}-${Date.now()}`,
+      block_type: i % 2 === 0 ? 'single_choice' : 'numeric_response',
+      title: `Exercício em Lote de Engenharia #${i + 1}`,
+      category: 'assessment',
+      subject_area: 'Mecânica dos Sólidos',
+      associated_competencies: [`COMP-LOT-${(i % 5) + 1}`],
+      initial_difficulty: ((i % 5) + 1) as 1 | 2 | 3 | 4 | 5,
+      estimated_minutes: 5,
+      config:
+        i % 2 === 0
+          ? {
+              prompt: `Pergunta do lote item ${i + 1}`,
+              options: [{ id: 'opt-1', label: 'A', text: 'Opção Correta', rationale: 'Explicado' }],
+              correctOptionId: 'opt-1',
+              explanation: 'Justificativa técnica',
+            }
+          : {
+              prompt: `Calcule a força ${i + 1}`,
+              expectedValue: 100 + i,
+              unit: 'kN',
+              toleranceAbs: 1.0,
+              explanation: 'Valor direto',
+            },
+      version: 1,
+    }))
+
+    const testFile = new File(
+      [
+        JSON.stringify({
+          schema_version: '1.0.0',
+          package_id: 'pkg-100',
+          name: 'Lote 100',
+          exported_at: new Date().toISOString(),
+          media_assets: [],
+          questions: [],
+          blocks: batch100Blocks,
+        }),
+      ],
+      'lote_100_blocos.json',
+      {
+        type: 'application/json',
+      },
+    )
+
+    const report = await ImportExportService.analyzeAndValidateFile(testFile, 'admin')
+    if (report.totalItemsDetected !== 100 || report.validItemsCount !== 100) {
+      throw new Error(
+        `Esperado 100 itens válidos detectados no lote, obtido total: ${report.totalItemsDetected}, válidos: ${report.validItemsCount}`,
+      )
+    }
+  })
+
+  // 6.3 Rejeição de JSON inválido e corrompido
+  await test('Segurança: Rejeição estrita de JSON malformado ou corrompido', async () => {
+    const corruptedFile = new File(
+      ['{ "broken_json": [ unclosed array '],
+      'arquivo_corrompido.json',
+      {
+        type: 'application/json',
+      },
+    )
+
+    const report = await ImportExportService.analyzeAndValidateFile(corruptedFile, 'admin')
+    if (report.globalErrors.length === 0) {
+      throw new Error('Deveria ter emitido erro global de JSON inválido')
+    }
+  })
+
+  // 6.4 Rejeição de tipos incompatíveis / não registrados
+  await test('Validação: Rejeição de tipos de blocos inexistentes ou incompatíveis', async () => {
+    const invalidTypePayload = {
+      id: `blk-incompat-${Date.now()}`,
+      block_type: 'tipo_falso_inexistente_xyz',
+      title: 'Bloco com tipo inválido',
+      category: 'assessment',
+      config: {},
+    }
+
+    const testFile = new File([JSON.stringify(invalidTypePayload)], 'tipo_invalido.json', {
+      type: 'application/json',
+    })
+
+    const report = await ImportExportService.analyzeAndValidateFile(testFile, 'admin')
+    if (report.incompatibleTypeCount === 0 || report.invalidItemsCount === 0) {
+      throw new Error('Deveria ter sinalizado tipo incompatível e item inválido')
+    }
+  })
+
+  // 6.5 Identificação de duplicatas e Reimportação Idempotente
+  await test('Idempotência & Versionamento: Reimportação atualiza sem duplicar registros', async () => {
+    const testId = `blk-idem-test-${Date.now()}`
+    const blockPayload = {
+      id: testId,
+      block_type: 'single_choice',
+      title: 'Versão 1 Original',
+      category: 'assessment',
+      config: {
+        prompt: 'V1',
+        options: [{ id: 'opt-1', label: 'A', text: 'V1', rationale: 'OK' }],
+        correctOptionId: 'opt-1',
+        explanation: 'Exp',
+      },
+      version: 1,
+    }
+
+    const fileV1 = new File([JSON.stringify(blockPayload)], 'v1.json', { type: 'application/json' })
+    const report1 = await ImportExportService.analyzeAndValidateFile(fileV1, 'admin')
+    await ImportExportService.executeImport(report1.items, 'v1.json', 'admin', 'Tester')
+
+    // Segunda importação com o mesmo ID
+    const blockPayloadV2 = {
+      ...blockPayload,
+      title: 'Versão 2 Atualizada',
+    }
+    const fileV2 = new File([JSON.stringify(blockPayloadV2)], 'v2.json', {
+      type: 'application/json',
+    })
+    const report2 = await ImportExportService.analyzeAndValidateFile(fileV2, 'admin')
+
+    if (report2.duplicateCount !== 1) {
+      throw new Error('Deveria ter detectado duplicata de ID existente')
+    }
+
+    await ImportExportService.executeImport(report2.items, 'v2.json', 'admin', 'Tester')
+    const updated = await BlockService.getById(testId)
+    if (!updated || updated.title !== 'Versão 2 Atualizada') {
+      throw new Error('O registro existente deveria ter sido atualizado com os novos dados')
+    }
+  })
+
+  // 6.6 Proteção de Gabarito (Private Key nunca vazada no student payload)
+  await test('Segurança: Proteção de gabarito — QuestionBankService nunca expõe privateKey ao aluno', async () => {
+    // Usa questão existente no demoCmsData
+    const questions = await QuestionBankService.listQuestions()
+    if (questions.length === 0) {
+      throw new Error('Nenhuma questão encontrada para validar proteção de gabarito')
+    }
+    const targetQ = questions[0]
+    const studentPayload = await QuestionBankService.getStudentPayload(targetQ.id)
+
+    if (!studentPayload) {
+      throw new Error('Payload do aluno não encontrado para a questão consultada')
+    }
+
+    const rawPayload = studentPayload as unknown as Record<string, unknown>
+    if (rawPayload.privateKey !== undefined) {
+      throw new Error('FALHA DE SEGURANÇA: privateKey foi exposta no payload do aluno!')
+    }
+    if (rawPayload.explanationMarkdown !== undefined) {
+      throw new Error('FALHA DE SEGURANÇA: explanationMarkdown foi exposta antes da submissão!')
+    }
+  })
+
+  // 6.7 RBAC: Content Editor e Student bloqueados de importar em massa
+  await test('RBAC: content_editor e student são bloqueados de realizar importação em massa', async () => {
+    const validFile = new File([JSON.stringify(DEMO_CANONICAL_PACKAGE)], 'pkg.json', {
+      type: 'application/json',
+    })
+
+    let editorBlocked = false
+    try {
+      await ImportExportService.analyzeAndValidateFile(validFile, 'content_editor')
+    } catch {
+      editorBlocked = true
+    }
+
+    if (!editorBlocked) {
+      throw new Error('content_editor NÃO deve ter autorização para importar em massa!')
+    }
+
+    let studentBlocked = false
+    try {
+      await ImportExportService.analyzeAndValidateFile(validFile, 'student')
+    } catch {
+      studentBlocked = true
+    }
+
+    if (!studentBlocked) {
+      throw new Error('student NÃO deve ter autorização para importar em massa!')
     }
   })
 

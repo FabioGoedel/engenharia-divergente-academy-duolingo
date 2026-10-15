@@ -144,12 +144,37 @@ export const EdivContentPackageSchema = z.object({
   blocks: z
     .array(
       z.object({
-        id: z.string().min(1),
-        block_type: z.string().min(1),
-        title: z.string().min(1),
-        category: z.enum(['assessment', 'media', 'interaction', 'flow', 'marketing']),
-        config: z.record(z.string(), z.unknown()),
+        id: z.string().min(1, 'ID do bloco é obrigatório'),
+        block_type: z.string().min(1, 'Tipo do bloco é obrigatório'),
+        title: z.string().min(1, 'Título do bloco é obrigatório'),
+        description: z.string().optional(),
+        category: z
+          .enum(['assessment', 'media', 'interaction', 'flow', 'marketing'])
+          .default('assessment'),
+        subject_area: z.string().optional(),
+        associated_competencies: z.array(z.string()).default([]),
+        initial_difficulty: z
+          .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+          .optional(),
+        estimated_minutes: z.number().nonnegative().optional(),
+        tags: z.array(z.string()).default([]),
+        author: z.string().optional(),
+        completion_policy: z
+          .enum(['submitted', 'watched', 'checked', 'manual', 'composite'])
+          .optional(),
+        config: z.record(z.string(), z.unknown()).default({}),
+        media_references: z
+          .array(
+            z.object({
+              media_id: z.string().optional(),
+              title: z.string().optional(),
+              url: z.string(),
+              type: z.string().optional(),
+            }),
+          )
+          .default([]),
         version: z.number().int().min(1).default(1),
+        editorial_status: z.enum(['draft', 'in_review', 'published', 'archived']).default('draft'),
       }),
     )
     .default([]),

@@ -38,6 +38,8 @@ import { AdminBlocksPage } from '@/pages/admin/AdminBlocksPage'
 import { AdminQuestionBankPage } from '@/pages/admin/AdminQuestionBankPage'
 import { AdminMediaPage } from '@/pages/admin/AdminMediaPage'
 import { AdminEditorialReviewPage } from '@/pages/admin/AdminEditorialReviewPage'
+import { AdminImportPage } from '@/pages/admin/AdminImportPage'
+import { AdminAiGeneratorToolsPage } from '@/pages/admin/AdminAiGeneratorToolsPage'
 import { LearnerBlockViewerPage } from '@/pages/learner/LearnerBlockViewerPage'
 import ActivityPlayerPage from '@/pages/learner/ActivityPlayerPage'
 
@@ -176,6 +178,14 @@ export default function App() {
                 {/* 3. Rotas do Admin (/admin/* protegidas por RBAC) */}
                 <Route path="/admin" element={<Navigate to="/admin/painel" replace />} />
                 <Route
+                  path="/admin/importar"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminImportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin/painel"
                   element={
                     <ProtectedRoute requiredRole="admin">
@@ -246,6 +256,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="content_editor">
                       <AdminEditorialReviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/gerador-ia"
+                  element={
+                    <ProtectedRoute requiredRole="content_editor">
+                      <AdminAiGeneratorToolsPage />
                     </ProtectedRoute>
                   }
                 />

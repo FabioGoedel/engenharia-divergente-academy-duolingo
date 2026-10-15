@@ -19,6 +19,8 @@ import {
   HelpCircle,
   FolderOpen,
   FileCheck,
+  UploadCloud,
+  Wand2,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Wordmark } from '@/components/Wordmark'
@@ -46,12 +48,14 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
   const editorialLinks = [
     { to: '/admin/blocos', label: 'Biblioteca de Blocos', icon: Boxes },
     { to: '/admin/questoes', label: 'Banco de Questões', icon: HelpCircle },
+    { to: '/admin/gerador-ia', label: 'Apoio IA & Schemas', icon: Wand2 },
     { to: '/admin/midia', label: 'Biblioteca de Mídia', icon: FolderOpen },
     { to: '/admin/revisao', label: 'Revisão Editorial', icon: FileCheck },
   ]
 
   // Gestão executiva — restrita a admin e super_admin (content_editor NÃO acessa)
   const adminLinks = [
+    { to: '/admin/importar', label: 'Importação em Massa', icon: UploadCloud },
     { to: '/admin/painel', label: 'Painel Admin', icon: BarChart3 },
     { to: '/admin/alunos', label: 'Gestão de Alunos', icon: Users },
     { to: '/admin/cursos', label: 'Cursos & Trilhas', icon: BookOpen },

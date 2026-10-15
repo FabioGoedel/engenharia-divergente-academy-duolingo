@@ -198,6 +198,11 @@ export interface ContentBlock {
   category: BlockCategory
   title: string
   description?: string
+  subjectArea?: string // Área do conhecimento (ex: "Mecânica dos Sólidos", "MEF")
+  associatedCompetencies?: string[] // Competências associadas (ex: ["COMP-MEF-01", "COMP-MAT-02"])
+  initialDifficulty?: 1 | 2 | 3 | 4 | 5 // Dificuldade inicial L1-L5
+  estimatedMinutes?: number // Tempo estimado em minutos
+  author?: string // Autor / Criador do conteúdo
   editorialStatus: EditorialStatus
   version: number
   config: Record<string, unknown>
@@ -205,6 +210,12 @@ export interface ContentBlock {
   tags: string[]
   referencedMediaId?: string
   referencedQuestionId?: string
+  mediaReferences?: Array<{
+    mediaId?: string
+    title?: string
+    url: string
+    type?: string
+  }>
   createdByName?: string
   createdAt: string
   updatedAt: string

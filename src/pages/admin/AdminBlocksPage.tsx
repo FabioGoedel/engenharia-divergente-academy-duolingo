@@ -44,23 +44,29 @@ export const AdminBlocksPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [difficultyFilter, setDifficultyFilter] = useState<number | 0>(0)
 
   // Modais
   const [previewBlock, setPreviewBlock] = useState<ContentBlock | null>(null)
   const [editingBlock, setEditingBlock] = useState<ContentBlock | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isCatalogOpen, setIsCatalogOpen] = useState(false)
+  const [newCompetencyInput, setNewCompetencyInput] = useState('')
+  const [newTagInput, setNewTagInput] = useState('')
 
   const allBlockTypes = getAllBlockDefinitions()
 
   const loadBlocks = async () => {
     setIsLoading(true)
     try {
-      const data = await BlockService.listBlocks({
+      let data = await BlockService.listBlocks({
         search: searchTerm,
         type: typeFilter === 'all' ? undefined : (typeFilter as BlockTypeId),
         status: statusFilter === 'all' ? undefined : (statusFilter as EditorialStatus),
       })
+      if (difficultyFilter > 0) {
+        data = data.filter((b) => b.initialDifficulty === difficultyFilter)
+      }
       setBlocks(data)
     } finally {
       setIsLoading(false)
@@ -69,7 +75,7 @@ export const AdminBlocksPage: React.FC = () => {
 
   useEffect(() => {
     loadBlocks()
-  }, [searchTerm, typeFilter, statusFilter])
+  }, [searchTerm, typeFilter, statusFilter, difficultyFilter])
 
   const handleOpenNewFromType = (typeDef: (typeof allBlockTypes)[0]) => {
     const newBlock: ContentBlock = {
@@ -78,11 +84,17 @@ export const AdminBlocksPage: React.FC = () => {
       category: typeDef.category,
       title: `Novo Bloco — ${typeDef.title}`,
       description: typeDef.description,
+      subjectArea: 'Mecânica dos Sólidos',
+      associatedCompetencies: ['COMP-ENG-01'],
+      initialDifficulty: 3,
+      estimatedMinutes: 10,
+      author: user?.name || 'Admin',
       editorialStatus: 'draft',
       version: 1,
       completionPolicy: typeDef.completionPolicy,
       tags: [typeDef.category, 'Fase 2'],
       config: JSON.parse(JSON.stringify(typeDef.defaultConfig)),
+      mediaReferences: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDemo: true,
@@ -227,13 +239,13 @@ export const AdminBlocksPage: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="relative">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="relative sm:col-span-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#A8BBC0]" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título, tipo ou tags..."
+            placeholder="Buscar por título, tipo, área ou tags..."
             className="pl-9 bg-[#152228] border-[#294149] text-white text-xs"
           />
         </div>
@@ -262,6 +274,20 @@ export const AdminBlocksPage: React.FC = () => {
             <option value="in_review">Em Revisão</option>
             <option value="published">Publicado</option>
             <option value="archived">Arquivado</option>
+          </select>
+        </div>
+        <div>
+          <select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(Number(e.target.value))}
+            className="w-full h-9 rounded-md bg-[#152228] border border-[#294149] text-white text-xs px-3 focus:outline-none focus:ring-1 focus:ring-[#01B59A]"
+          >
+            <option value={0}>Todas as Dificuldades</option>
+            <option value={1}>Nível 1 — Básico / Revisão</option>
+            <option value={2}>Nível 2 — Aplicação Direta</option>
+            <option value={3}>Nível 3 — Intermediário</option>
+            <option value={4}>Nível 4 — Avançado / Normativo</option>
+            <option value={5}>Nível 5 — Especialista / Julgamento</option>
           </select>
         </div>
       </div>
@@ -316,6 +342,43 @@ export const AdminBlocksPage: React.FC = () => {
                       <p className="text-xs text-[#A8BBC0] line-clamp-2 mt-1">{b.description}</p>
                     )}
                   </div>
+
+                  {/* Metadados Pedagógicos Exigidos */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#A8BBC0]">
+                    {b.subjectArea && (
+                      <span className="bg-[#0C1317] px-1.5 py-0.5 rounded border border-[#294149]">
+                        {b.subjectArea}
+                      </span>
+                    )}
+                    {b.initialDifficulty && (
+                      <span className="bg-[#01B59A]/10 text-[#01B59A] px-1.5 py-0.5 rounded font-mono">
+                        Nível L{b.initialDifficulty}
+                      </span>
+                    )}
+                    {b.estimatedMinutes && (
+                      <span className="bg-[#152228] px-1.5 py-0.5 rounded font-mono">
+                        ~{b.estimatedMinutes} min
+                      </span>
+                    )}
+                    {b.author && (
+                      <span className="text-[#A8BBC0]/70 truncate max-w-[120px]">
+                        por {b.author}
+                      </span>
+                    )}
+                  </div>
+
+                  {b.associatedCompetencies && b.associatedCompetencies.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {b.associatedCompetencies.map((c) => (
+                        <span
+                          key={c}
+                          className="font-mono text-[9px] bg-[#C69B4B]/10 text-[#C69B4B] px-1 py-0.2 rounded border border-[#C69B4B]/20"
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Referências de Trilha (em quais cursos aparece) */}
@@ -431,6 +494,81 @@ export const AdminBlocksPage: React.FC = () => {
                 })()}
               </div>
 
+              {/* Tabela de Propriedades do Bloco */}
+              <div className="rounded-lg border border-[#294149] bg-[#152228]/50 p-3 text-xs space-y-2">
+                <span className="font-mono text-[10px] uppercase text-[#01B59A] font-semibold block">
+                  Metadados do Bloco de Conteúdo:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-[#A8BBC0] block">ID Único:</span>
+                    <span className="font-mono text-white">{previewBlock.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#A8BBC0] block">Área do Conhecimento:</span>
+                    <span className="text-white">
+                      {previewBlock.subjectArea || 'Não informada'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#A8BBC0] block">Dificuldade:</span>
+                    <span className="text-white">Nível L{previewBlock.initialDifficulty || 3}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#A8BBC0] block">Tempo Estimado:</span>
+                    <span className="text-white">{previewBlock.estimatedMinutes || 5} min</span>
+                  </div>
+                  <div>
+                    <span className="text-[#A8BBC0] block">Autor / Origem:</span>
+                    <span className="text-white">
+                      {previewBlock.author || previewBlock.createdByName || 'eDiv'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#A8BBC0] block">Criado / Atualizado:</span>
+                    <span className="font-mono text-[10px] text-white">
+                      {new Date(previewBlock.updatedAt).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+                {previewBlock.associatedCompetencies &&
+                  previewBlock.associatedCompetencies.length > 0 && (
+                    <div className="pt-2 border-t border-[#294149]/50">
+                      <span className="text-[#A8BBC0] block text-[10px] mb-1">
+                        Competências Associadas:
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {previewBlock.associatedCompetencies.map((comp) => (
+                          <span
+                            key={comp}
+                            className="font-mono text-[9px] bg-[#C69B4B]/20 text-[#C69B4B] px-1.5 py-0.5 rounded"
+                          >
+                            {comp}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                {previewBlock.mediaReferences && previewBlock.mediaReferences.length > 0 && (
+                  <div className="pt-2 border-t border-[#294149]/50">
+                    <span className="text-[#A8BBC0] block text-[10px] mb-1">
+                      Referências de Mídia ({previewBlock.mediaReferences.length}):
+                    </span>
+                    <div className="space-y-1">
+                      {previewBlock.mediaReferences.map((m, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-[10px] text-[#01B59A] font-mono bg-[#0C1317] p-1 rounded"
+                        >
+                          <span>{m.title || m.mediaId || `Mídia #${idx + 1}`}:</span>
+                          <span className="text-[#A8BBC0] truncate">{m.url}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-lg border border-[#294149] bg-[#0C1317] p-3 text-xs space-y-2">
                 <span className="font-mono text-[10px] uppercase text-[#A8BBC0]">
                   Configuração Interna (config):
@@ -474,7 +612,7 @@ export const AdminBlocksPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <Label className="text-xs text-white">Tipo do Bloco</Label>
                   <Input
@@ -484,12 +622,131 @@ export const AdminBlocksPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-white">Política de Conclusão</Label>
+                  <Label className="text-xs text-white">Área do Conhecimento</Label>
                   <Input
-                    value={editingBlock.completionPolicy}
-                    disabled
-                    className="mt-1 bg-[#0C1317] border-[#294149] text-[#A8BBC0] font-mono text-xs"
+                    value={editingBlock.subjectArea || ''}
+                    onChange={(e) =>
+                      setEditingBlock({ ...editingBlock, subjectArea: e.target.value })
+                    }
+                    placeholder="Ex: Mecânica dos Sólidos"
+                    className="mt-1 bg-[#152228] border-[#294149] text-white text-xs"
                   />
+                </div>
+                <div>
+                  <Label className="text-xs text-white">Dificuldade Inicial (L1-L5)</Label>
+                  <select
+                    value={editingBlock.initialDifficulty || 3}
+                    onChange={(e) =>
+                      setEditingBlock({
+                        ...editingBlock,
+                        initialDifficulty: Number(e.target.value) as 1 | 2 | 3 | 4 | 5,
+                      })
+                    }
+                    className="mt-1 w-full h-9 rounded-md bg-[#152228] border border-[#294149] text-white text-xs px-2 font-mono"
+                  >
+                    <option value={1}>L1 — Revisão Guiada</option>
+                    <option value={2}>L2 — Aplicação Direta</option>
+                    <option value={3}>L3 — Investigativo</option>
+                    <option value={4}>L4 — Síntese & Normas</option>
+                    <option value={5}>L5 — Julgamento</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-white">Tempo Estimado (min)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={editingBlock.estimatedMinutes || 5}
+                    onChange={(e) =>
+                      setEditingBlock({
+                        ...editingBlock,
+                        estimatedMinutes: Math.max(1, parseInt(e.target.value, 10) || 5),
+                      })
+                    }
+                    className="mt-1 bg-[#152228] border-[#294149] text-white font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-white">Autor / Especialista Responsável</Label>
+                <Input
+                  value={editingBlock.author || ''}
+                  onChange={(e) => setEditingBlock({ ...editingBlock, author: e.target.value })}
+                  placeholder="Nome do autor ou 'Engenharia Divergente Academy'"
+                  className="mt-1 bg-[#152228] border-[#294149] text-white text-xs"
+                />
+              </div>
+
+              {/* Gestão de Competências Associadas */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-white">Competências Associadas</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newCompetencyInput}
+                    onChange={(e) => setNewCompetencyInput(e.target.value)}
+                    placeholder="Adicionar código (ex: COMP-MEF-CONV)"
+                    className="bg-[#152228] border-[#294149] text-white text-xs font-mono"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (newCompetencyInput.trim()) {
+                          const comps = editingBlock.associatedCompetencies || []
+                          if (!comps.includes(newCompetencyInput.trim())) {
+                            setEditingBlock({
+                              ...editingBlock,
+                              associatedCompetencies: [...comps, newCompetencyInput.trim()],
+                            })
+                          }
+                          setNewCompetencyInput('')
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-[#294149] text-xs text-white hover:border-[#01B59A]"
+                    onClick={() => {
+                      if (newCompetencyInput.trim()) {
+                        const comps = editingBlock.associatedCompetencies || []
+                        if (!comps.includes(newCompetencyInput.trim())) {
+                          setEditingBlock({
+                            ...editingBlock,
+                            associatedCompetencies: [...comps, newCompetencyInput.trim()],
+                          })
+                        }
+                        setNewCompetencyInput('')
+                      }
+                    }}
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(editingBlock.associatedCompetencies || []).map((comp) => (
+                    <span
+                      key={comp}
+                      className="inline-flex items-center gap-1 font-mono text-[10px] bg-[#C69B4B]/15 text-[#C69B4B] px-2 py-0.5 rounded border border-[#C69B4B]/30"
+                    >
+                      {comp}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingBlock({
+                            ...editingBlock,
+                            associatedCompetencies: (
+                              editingBlock.associatedCompetencies || []
+                            ).filter((c) => c !== comp),
+                          })
+                        }
+                        className="hover:text-white"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </div>
               </div>
 
