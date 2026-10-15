@@ -227,6 +227,17 @@ export const DEMO_USERS: Record<string, UserSession> = {
     totalXp: 9150,
     isDemo: true,
   },
+  'editor@demo.com': {
+    id: 'usr-editor-001',
+    name: 'Eng. Roberto Vasconcelos',
+    email: 'editor@demo.com',
+    role: 'content_editor',
+    headline: 'Editor Técnico de Conteúdo • Engenharia Divergente',
+    creaNumber: 'MG-201590124',
+    streakDays: 20,
+    totalXp: 4320,
+    isDemo: true,
+  },
 }
 
 export const STUDENT_COURSES: StudentCourse[] = [

@@ -15,6 +15,10 @@ import {
   BarChart3,
   LogOut,
   Sparkles,
+  Boxes,
+  HelpCircle,
+  FolderOpen,
+  FileCheck,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Wordmark } from '@/components/Wordmark'
@@ -26,7 +30,7 @@ interface SidebarNavProps {
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, isEditorial, logout } = useAuth()
 
   const studentLinks = [
     { to: '/app', label: 'Painel Pessoal', icon: LayoutDashboard, exact: true },
@@ -38,6 +42,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
     { to: '/app/perfil', label: 'Meu Perfil', icon: UserIcon },
   ]
 
+  // Módulos editoriais (Fase 2) — acessíveis por content_editor, admin, super_admin
+  const editorialLinks = [
+    { to: '/admin/blocos', label: 'Biblioteca de Blocos', icon: Boxes },
+    { to: '/admin/questoes', label: 'Banco de Questões', icon: HelpCircle },
+    { to: '/admin/midia', label: 'Biblioteca de Mídia', icon: FolderOpen },
+    { to: '/admin/revisao', label: 'Revisão Editorial', icon: FileCheck },
+  ]
+
+  // Gestão executiva — restrita a admin e super_admin (content_editor NÃO acessa)
   const adminLinks = [
     { to: '/admin/painel', label: 'Painel Admin', icon: BarChart3 },
     { to: '/admin/alunos', label: 'Gestão de Alunos', icon: Users },
@@ -104,7 +117,54 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
           </nav>
         </div>
 
-        {/* Grupo Admin (Apenas para admin/super_admin) */}
+        {/* Grupo Editorial / CMS (Fase 2: content_editor, admin, super_admin) */}
+        {isEditorial && (
+          <div className="pt-2 border-t border-[#294149]/40">
+            <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#01B59A] flex items-center justify-between">
+              <span>CMS & Conteúdo</span>
+              <Badge
+                variant="outline"
+                className="text-[9px] border-[#01B59A]/40 text-[#01B59A] px-1 py-0"
+              >
+                Fase 2
+              </Badge>
+            </div>
+            <nav className="space-y-1">
+              {editorialLinks.map((item) => {
+                const Icon = item.icon
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={onItemClick}
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150',
+                        isActive
+                          ? 'bg-[#152228] text-white border-l-2 border-[#01B59A] pl-[10px] shadow-sm'
+                          : 'text-[#A8BBC0] hover:text-white hover:bg-[#152228]/50',
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon
+                          className={cn(
+                            'h-4 w-4 shrink-0 transition-colors',
+                            isActive ? 'text-[#01B59A]' : 'text-[#A8BBC0] group-hover:text-white',
+                          )}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                )
+              })}
+            </nav>
+          </div>
+        )}
+
+        {/* Grupo Gestão Administrativa (Apenas admin e super_admin — content_editor bloqueado) */}
         {isAdmin && (
           <div className="pt-2 border-t border-[#294149]/40">
             <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#C69B4B] flex items-center justify-between">

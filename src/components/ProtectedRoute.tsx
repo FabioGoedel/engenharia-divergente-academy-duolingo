@@ -32,7 +32,25 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Checagem de rota administrativa
+  // Checagem de rota editorial (content_editor, admin, super_admin)
+  if (
+    requiredRole === 'content_editor' &&
+    role &&
+    role !== 'content_editor' &&
+    !isAdminRole(role)
+  ) {
+    if (!notified) {
+      setNotified(true)
+      toast({
+        variant: 'destructive',
+        title: 'Acesso restrito à equipe editorial',
+        description: 'Seu papel atual não possui privilégios de edição de conteúdo.',
+      })
+    }
+    return <Navigate to="/app" replace />
+  }
+
+  // Checagem de rota administrativa estrita (apenas admin ou super_admin)
   if (requiredRole === 'admin' && role && !isAdminRole(role)) {
     if (!notified) {
       setNotified(true)
@@ -40,7 +58,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
         variant: 'destructive',
         title: 'Acesso restrito a administradores',
         description:
-          'Seu papel atual não possui privilégios de gestão. Redirecionando para o painel do aluno.',
+          'Seu papel atual não possui privilégios de gestão avançada. Redirecionando para o painel.',
       })
     }
     return <Navigate to="/app" replace />

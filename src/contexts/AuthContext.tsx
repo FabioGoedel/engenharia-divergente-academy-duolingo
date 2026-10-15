@@ -8,6 +8,8 @@ interface AuthContextType {
   role: Role | null
   isAuthenticated: boolean
   isAdmin: boolean
+  isContentEditor: boolean
+  isEditorial: boolean
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<UserSession>
   register: (data: RegisterData) => Promise<UserSession>
@@ -51,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const role = user?.role ?? null
   const isAuthenticated = !!user
   const isAdmin = role ? isAdminRole(role) : false
+  const isContentEditor = role === 'content_editor'
+  const isEditorial = role ? role === 'content_editor' || isAdminRole(role) : false
 
   return (
     <AuthContext.Provider
@@ -59,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         isAuthenticated,
         isAdmin,
+        isContentEditor,
+        isEditorial,
         isLoading,
         login,
         register,

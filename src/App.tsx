@@ -33,6 +33,13 @@ import AdminCoursesPage from '@/pages/admin/AdminCoursesPage'
 import AdminEnrollmentsPage from '@/pages/admin/AdminEnrollmentsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
 
+// Páginas CMS e Multimídia (Fase 2)
+import { AdminBlocksPage } from '@/pages/admin/AdminBlocksPage'
+import { AdminQuestionBankPage } from '@/pages/admin/AdminQuestionBankPage'
+import { AdminMediaPage } from '@/pages/admin/AdminMediaPage'
+import { AdminEditorialReviewPage } from '@/pages/admin/AdminEditorialReviewPage'
+import { LearnerBlockViewerPage } from '@/pages/learner/LearnerBlockViewerPage'
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -115,6 +122,22 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/app/bloco"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <LearnerBlockViewerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app/preview-bloco"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <LearnerBlockViewerPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Compatibilidade retroativa para especificação (/aluno/*) */}
                 <Route path="/aluno" element={<Navigate to="/app" replace />} />
@@ -180,6 +203,40 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminReportsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Rotas Editoriais da Fase 2 (acesso por content_editor, admin ou super_admin) */}
+                <Route
+                  path="/admin/blocos"
+                  element={
+                    <ProtectedRoute requiredRole="content_editor">
+                      <AdminBlocksPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/questoes"
+                  element={
+                    <ProtectedRoute requiredRole="content_editor">
+                      <AdminQuestionBankPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/midia"
+                  element={
+                    <ProtectedRoute requiredRole="content_editor">
+                      <AdminMediaPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/revisao"
+                  element={
+                    <ProtectedRoute requiredRole="content_editor">
+                      <AdminEditorialReviewPage />
                     </ProtectedRoute>
                   }
                 />

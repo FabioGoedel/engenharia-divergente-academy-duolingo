@@ -197,7 +197,7 @@ export default function LoginPage() {
           </div>
 
           {/* Contas Demo Clicáveis */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => handleSelectDemoAccount('aluno@demo.com', 'demo123')}
@@ -212,6 +212,25 @@ export default function LoginPage() {
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground font-mono truncate">aluno@demo.com</p>
+              <p className="text-[10px] text-muted-foreground mt-1">senha: demo123</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoAccount('editor@demo.com', 'demo123')}
+              className="p-3 text-left rounded-lg border border-border bg-background hover:border-[#01B59A] hover:bg-muted/60 transition-all text-xs group"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-foreground group-hover:text-[#01B59A]">
+                  Editor CMS
+                </span>
+                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-[#01B59A]/20 text-[#01B59A] border border-[#01B59A]/30 font-mono">
+                  editor
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground font-mono truncate">
+                editor@demo.com
+              </p>
               <p className="text-[10px] text-muted-foreground mt-1">senha: demo123</p>
             </button>
 

@@ -75,3 +75,7 @@ export function hasPermission(role: Role, permission: Permission): boolean {
 export function isAdminRole(role: Role): boolean {
   return role === 'admin' || role === 'super_admin'
 }
+
+export function isEditorialRole(role: Role): boolean {
+  return role === 'content_editor' || role === 'admin' || role === 'super_admin'
+}
