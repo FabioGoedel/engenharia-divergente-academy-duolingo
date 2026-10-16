@@ -38,6 +38,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
     { to: '/app', label: 'Painel Pessoal', icon: LayoutDashboard, exact: true },
     { to: '/app/trilhas', label: 'Trilhas de Engenharia', icon: Compass },
     { to: '/app/meus-cursos', label: 'Meus Cursos', icon: GraduationCap },
+    { to: '/app/biblioteca', label: 'Biblioteca & Materiais', icon: BookOpen },
     { to: '/app/progresso', label: 'Competências & Horas', icon: TrendingUp },
     { to: '/app/conquistas', label: 'Conquistas & XP', icon: Award },
     { to: '/app/assinatura', label: 'Assinatura & Acessos', icon: CreditCard },

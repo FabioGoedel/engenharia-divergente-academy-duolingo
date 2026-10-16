@@ -26,7 +26,7 @@ import AchievementsPage from '@/pages/learner/AchievementsPage'
 import SubscriptionPage from '@/pages/learner/SubscriptionPage'
 import ProfilePage from '@/pages/learner/ProfilePage'
 import CertificatesPage from '@/pages/learner/CertificatesPage'
-
+import LearnerLibraryPage from '@/pages/learner/LearnerLibraryPage'
 // Páginas do Admin (/admin)
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import AdminStudentsPage from '@/pages/admin/AdminStudentsPage'
@@ -94,6 +94,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="student">
                       <MyCoursesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app/biblioteca"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <LearnerLibraryPage />
                     </ProtectedRoute>
                   }
                 />

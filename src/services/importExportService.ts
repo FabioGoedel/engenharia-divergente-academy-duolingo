@@ -210,17 +210,31 @@ export async function extractZipManifest(file: File): Promise<{
       description: `Pacote importado via arquivo ZIP (${mediaFiles.length} recursos detectados)`,
       author: 'Importador ZIP eDiv',
       exported_at: new Date().toISOString(),
-      media_assets: mediaFiles.map((m, idx) => ({
-        id: `med-zip-${idx + 1}`,
-        title: m.name,
-        assetType: m.name.match(/\.(png|jpg|jpeg|gif|webp)$/i) ? 'image' : 'pdf_document',
-        provider: 'external_url',
-        externalId: m.name,
-        publicUrl: `https://storage-demo.ediv.academy/assets/${m.name}`,
-        licenseInfo: 'Pacote ZIP do Usuário',
-        accessRules: { requiresEntitlement: false },
-        tags: ['ZIP', 'Mídia'],
-      })),
+      media_assets: mediaFiles.map((m, idx) => {
+        const ext = m.name.split('.').pop()?.toLowerCase() || ''
+        let aType: any = 'pdf_document'
+        if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) aType = 'image'
+        else if (
+          ['step', 'stp', 'iges', 'igs', 'stl', 'dxf', 'sldprt', 'sldasm', 'slddrw'].includes(ext)
+        )
+          aType = 'cad_model'
+        else if (['xlsx', 'xls', 'csv'].includes(ext)) aType = 'spreadsheet'
+        else if (['zip', 'rar', '7z'].includes(ext)) aType = 'archive'
+
+        return {
+          id: `med-zip-${idx + 1}`,
+          title: m.name,
+          assetType: aType,
+          provider: 'supabase_storage',
+          externalId: m.name,
+          publicUrl: `/storage/protected/zip_imports/${m.name}`,
+          licenseInfo: 'Pacote ZIP do Usuário — Engenharia Divergente',
+          accessRules: { requiresEntitlement: true },
+          tags: ['ZIP', 'Mídia', ext.toUpperCase()],
+          fileSizeBytes: m.size,
+          originalFilename: m.name,
+        }
+      }),
       questions: [],
       blocks: [],
     })

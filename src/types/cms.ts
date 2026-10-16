@@ -20,9 +20,24 @@ export type BlockCompletionPolicy = 'submitted' | 'watched' | 'checked' | 'manua
 export type BlockPriority = 'P0' | 'P1' | 'P2'
 
 // 2. Tipos de Mídia
-export type MediaAssetType = 'youtube_video' | 'private_video' | 'pdf_document' | 'audio' | 'image'
+export type MediaAssetType =
+  | 'youtube_video'
+  | 'private_video'
+  | 'pdf_document'
+  | 'audio'
+  | 'image'
+  | 'cad_model'
+  | 'spreadsheet'
+  | 'archive'
+  | 'exercise_file'
 
-export type MediaStorageProvider = 'youtube' | 'cloudflare_stream' | 's3_storage' | 'external_url'
+export type MediaStorageProvider =
+  | 'youtube'
+  | 'cloudflare_stream'
+  | 's3_storage'
+  | 'external_url'
+  | 'supabase_storage'
+  | 'vimeo'
 
 export interface MediaAsset {
   id: string
@@ -43,11 +58,33 @@ export interface MediaAsset {
   tags: string[]
   relatedProductId?: string
   fileSizeBytes?: number
-  isPendingStorage: boolean // Marcação explícita de mock / pendente de storage real
+  isPendingStorage: boolean
   createdByName?: string
   createdAt: string
   updatedAt: string
-  isDemo: true
+  isDemo?: boolean
+  // Campos aditivos da Subfase 4.4
+  storageBucket?: 'media_library' | 'protected_materials' | string
+  storagePath?: string
+  fileHash?: string
+  mimeType?: string
+  originalFilename?: string
+  fileExtension?: string
+  folderPath?: string
+  categoryTag?:
+    | 'videos'
+    | 'documents'
+    | 'images'
+    | 'cad'
+    | 'spreadsheets'
+    | 'archives'
+    | 'exercises'
+    | string
+  isArchived?: boolean
+  isMandatoryReading?: boolean
+  allowDownload?: boolean
+  version?: number
+  rootAssetId?: string
 }
 
 // 3. Tipos do Banco de Questões

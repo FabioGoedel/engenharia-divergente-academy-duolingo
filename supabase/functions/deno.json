@@ -1,5 +1,6 @@
 {
   "_versions": {
-    "evaluate-submission": 8
+    "evaluate-submission": 12,
+    "signed-media-url": 1
   }
 }
