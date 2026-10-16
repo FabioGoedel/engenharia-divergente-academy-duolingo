@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Database, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Wordmark } from '@/components/Wordmark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { useAuth } from '@/contexts/AuthContext'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 
 export default function RegisterPage() {
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [registeredPendingConfirmation, setRegisteredPendingConfirmation] = useState(false)
 
   const { register } = useAuth()
   const { toast } = useToast()
@@ -51,6 +53,15 @@ export default function RegisterPage() {
       return
     }
 
+    if (password.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Senha muito curta',
+        description: 'A senha deve conter no mínimo 6 caracteres.',
+      })
+      return
+    }
+
     if (password !== confirmPassword) {
       toast({
         variant: 'destructive',
@@ -62,23 +73,41 @@ export default function RegisterPage() {
 
     setIsSubmitting(true)
     try {
-      await register({
+      const result = await register({
         name,
         email,
         password,
         creaNumber: creaNumber || undefined,
       })
 
-      toast({
-        title: 'Conta demo criada com sucesso',
-        description: `Bem-vindo(a), ${name}! Sua sessão de aluno foi iniciada no modo demonstração.`,
-      })
-      navigate('/app', { replace: true })
-    } catch {
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro no cadastro',
+          description: result.error,
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      if (result.requiresEmailConfirmation) {
+        setRegisteredPendingConfirmation(true)
+        toast({
+          title: 'Conta criada! Verifique seu e-mail',
+          description: `Um e-mail de confirmação foi enviado para ${email}.`,
+        })
+      } else {
+        toast({
+          title: 'Conta criada com sucesso no Supabase!',
+          description: `Bem-vindo(a), ${name}! Papel atribuído: student (RLS ativo).`,
+        })
+        navigate('/app', { replace: true })
+      }
+    } catch (err: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Erro no cadastro demo',
-        description: 'Ocorreu uma falha ao criar o perfil demonstrativo.',
+        title: 'Falha no cadastro',
+        description: err instanceof Error ? err.message : 'Ocorreu uma falha inesperada.',
       })
     } finally {
       setIsSubmitting(false)
@@ -87,151 +116,167 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-background">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <Wordmark size="lg" to="/" />
       </div>
 
       <Card className="w-full max-w-md border-border bg-card shadow-lg">
         <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
-            Criar sua conta de aluno
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+              Criar sua conta de aluno
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className="border-primary/40 text-primary text-[10px] font-mono flex items-center gap-1"
+            >
+              <Database className="h-3 w-3" />
+              <span>Supabase</span>
+            </Badge>
+          </div>
           <CardDescription className="text-xs text-muted-foreground">
-            Matricule-se para acessar as trilhas e exercícios da Engenharia Divergente.
+            Matricule-se na Engenharia Divergente com autenticação real e perfil de estudante.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5">
-          {/* Aviso Demo */}
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-500 flex items-start gap-2.5">
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-            <div className="leading-snug space-y-1">
-              <p className="font-semibold text-[11px] uppercase tracking-wide">
-                Ambiente de Demonstração (Fase 1)
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Novas contas são salvas em memória local e recebem papel de <code>student</code>.
-                Nenhum dado é enviado a servidores de produção.
-              </p>
+          {registeredPendingConfirmation ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Verifique seu e-mail</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                  Enviamos o link de confirmação para <strong>{email}</strong>. Clique no link para
+                  ativar seu acesso.
+                </p>
+              </div>
+              <Button
+                asChild
+                className="w-full bg-[#01B59A] hover:bg-[#00A88F] text-black font-semibold text-xs"
+              >
+                <Link to="/login">Ir para a tela de Login</Link>
+              </Button>
             </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-semibold text-foreground">
-                Nome completo
-              </Label>
-              <Input
-                id="name"
-                placeholder="Ex.: Lucas Miranda"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="bg-background border-border text-foreground text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-foreground">
-                E-mail
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="nome@empresa.com.br"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-background border-border text-foreground text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="crea" className="text-xs font-semibold text-foreground">
-                  Registro Profissional / CREA
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs font-semibold text-foreground">
+                  Nome completo
                 </Label>
-                <span className="text-[10px] text-muted-foreground font-mono">opcional</span>
-              </div>
-              <Input
-                id="crea"
-                placeholder="Ex.: SP-2021104829"
-                value={creaNumber}
-                onChange={(e) => setCreaNumber(e.target.value)}
-                className="bg-background border-border text-foreground text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-semibold text-foreground">
-                Senha de acesso
-              </Label>
-              <div className="relative">
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Mínimo de 6 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="name"
+                  placeholder="Ex.: Lucas Miranda"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
-                  className="bg-background border-border text-foreground text-sm pr-10"
+                  className="bg-background border-border text-foreground text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
               </div>
 
-              {/* Indicador de Força */}
-              {password && (
-                <div className="pt-1.5 space-y-1">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-muted-foreground">Força da senha:</span>
-                    <span className="font-semibold text-foreground">{strength.label}</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${strength.color}`}
-                      style={{ width: `${strength.score}%` }}
-                    />
-                  </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold text-foreground">
+                  E-mail institucional ou profissional
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome@empresa.com.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-background border-border text-foreground text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="crea" className="text-xs font-semibold text-foreground">
+                    Registro Profissional / CREA
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">opcional</span>
                 </div>
-              )}
-            </div>
+                <Input
+                  id="crea"
+                  placeholder="Ex.: SP-2021104829"
+                  value={creaNumber}
+                  onChange={(e) => setCreaNumber(e.target.value)}
+                  className="bg-background border-border text-foreground text-sm"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-xs font-semibold text-foreground">
-                Confirmar senha
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Repita sua senha"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="bg-background border-border text-foreground text-sm"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold text-foreground">
+                  Senha de acesso
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Mínimo de 6 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="bg-background border-border text-foreground text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-[#01B59A] hover:bg-[#00A88F] text-black font-bold text-sm h-10 mt-2 shadow-sm"
-            >
-              {isSubmitting ? (
-                'Criando conta demo...'
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <span>Criar conta de aluno</span>
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-              )}
-            </Button>
-          </form>
+                {password && (
+                  <div className="pt-1.5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-muted-foreground">Força da senha:</span>
+                      <span className="font-semibold text-foreground">{strength.label}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${strength.color}`}
+                        style={{ width: `${strength.score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-xs font-semibold text-foreground">
+                  Confirmar senha
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Repita sua senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="bg-background border-border text-foreground text-sm"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#01B59A] hover:bg-[#00A88F] text-black font-bold text-sm h-10 mt-2 shadow-sm"
+              >
+                {isSubmitting ? (
+                  'Registrando no Supabase...'
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <span>Criar conta de aluno</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+              </Button>
+            </form>
+          )}
 
           <div className="text-center pt-2 border-t border-border">
             <p className="text-xs text-muted-foreground">

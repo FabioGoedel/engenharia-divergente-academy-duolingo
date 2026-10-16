@@ -27,6 +27,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/app/assinatura': 'Assinatura & Entitlements',
   '/app/perfil': 'Meu Perfil',
   '/admin/painel': 'Painel de Controle Administrativo',
+  '/admin/usuarios': 'Gestão de Usuários e RBAC',
   '/admin/alunos': 'Gestão de Alunos',
   '/admin/cursos': 'Catálogo de Cursos & Trilhas',
   '/admin/matriculas': 'Matrículas & Entitlements',

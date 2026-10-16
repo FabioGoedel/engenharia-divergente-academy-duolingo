@@ -26,7 +26,8 @@ export interface UserSession {
   creaNumber?: string // engenharia
   streakDays: number
   totalXp: number
-  isDemo: true
+  isDemo?: boolean
+  emailConfirmed?: boolean
 }
 
 export interface StudentCourse {

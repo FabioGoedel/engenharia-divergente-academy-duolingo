@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   User as UserIcon,
   ShieldCheck,
@@ -9,8 +9,9 @@ import {
   CheckCircle2,
   Database,
   Lock,
+  AlertCircle,
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +21,7 @@ import { useToast } from '@/hooks/use-toast'
 import { AuthService } from '@/services/authService'
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth()
+  const { user, authMode, refreshUser } = useAuth()
   const { toast } = useToast()
 
   const [name, setName] = useState(user?.name || '')
@@ -28,19 +29,41 @@ export default function ProfilePage() {
   const [crea, setCrea] = useState(user?.creaNumber || '')
   const [isSaving, setIsSaving] = useState(false)
 
+  useEffect(() => {
+    if (user) {
+      setName(user.name)
+      setHeadline(user.headline || '')
+      setCrea(user.creaNumber || '')
+    }
+  }, [user])
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
     try {
-      await AuthService.updateProfile({
+      const result = await AuthService.updateProfile({
         name,
         headline,
         creaNumber: crea,
       })
-      refreshUser()
+
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao salvar',
+          description: result.error,
+        })
+        return
+      }
+
+      await refreshUser()
       toast({
-        title: 'Perfil atualizado (Memória Local)',
-        description: 'Os dados foram atualizados no ambiente de demonstração.',
+        title:
+          authMode === 'real' ? 'Perfil atualizado no Supabase!' : 'Perfil atualizado (Modo Demo)',
+        description:
+          authMode === 'real'
+            ? 'Alterações salvas com sucesso no banco de dados e registradas na auditoria.'
+            : 'Os dados foram atualizados no ambiente de demonstração local.',
       })
     } catch {
       toast({
@@ -65,7 +88,7 @@ export default function ProfilePage() {
           Meu Perfil de Engenheiro
         </h1>
         <p className="text-xs md:text-sm text-muted-foreground">
-          Gerencie suas informações cadastrais, CREA e credenciais no LMS.
+          Gerencie suas informações cadastrais, CREA e credenciais no LMS com persistência real.
         </p>
       </div>
 
@@ -79,15 +102,32 @@ export default function ProfilePage() {
                 .map((p) => p[0])
                 .slice(0, 2)
                 .join('')
-                .toUpperCase()}
+                .toUpperCase() || 'ED'}
             </div>
 
             <div className="space-y-1 text-center sm:text-left flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
-                <Badge className="w-fit mx-auto sm:mx-0 bg-primary/20 text-primary border-primary/30 text-[10px] uppercase font-mono">
-                  {user?.role}
-                </Badge>
+                <div className="flex items-center gap-1.5 justify-center sm:justify-start">
+                  <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] uppercase font-mono">
+                    {user?.role}
+                  </Badge>
+                  {authMode === 'real' ? (
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-500/40 text-emerald-400 bg-emerald-500/10 text-[10px] font-mono"
+                    >
+                      Supabase Conectado
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500/40 text-amber-400 bg-amber-500/10 text-[10px] font-mono"
+                    >
+                      Modo Demo Isolado
+                    </Badge>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">{user?.headline}</p>
               <p className="text-xs text-muted-foreground font-mono">
@@ -106,7 +146,8 @@ export default function ProfilePage() {
               Dados Profissionais & Matrícula
             </CardTitle>
             <CardDescription className="text-xs">
-              Mantenha seu CREA atualizado para correta emissão de ART ou certificados técnicos.
+              Mantenha seu CREA atualizado para correta emissão de certificados e validação de
+              competências.
             </CardDescription>
           </CardHeader>
 
@@ -126,7 +167,7 @@ export default function ProfilePage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="prof-email" className="text-xs font-semibold text-foreground">
-                  E-mail institucional (Leitura)
+                  E-mail institucional (Leitura / Autenticado)
                 </Label>
                 <Input
                   id="prof-email"
@@ -168,9 +209,14 @@ export default function ProfilePage() {
             <div className="p-3 rounded-lg border border-border bg-background/50 text-[11px] text-muted-foreground flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Database className="h-3.5 w-3.5 text-primary" />
-                Persistência atual: LocalStorage (Simulação de sessão)
+                Backend de Persistência:{' '}
+                <strong className="text-foreground">
+                  {authMode === 'real'
+                    ? 'PostgreSQL (Supabase Live via RLS)'
+                    : 'LocalStorage (Demo Isolado)'}
+                </strong>
               </span>
-              <span className="font-mono text-[#C69B4B]">Sync com Supabase: PENDENTE</span>
+              <span className="font-mono text-[#01B59A]">RBAC 4.1 Ativo</span>
             </div>
 
             <div className="pt-2 flex justify-end">
@@ -180,7 +226,7 @@ export default function ProfilePage() {
                 className="bg-[#01B59A] hover:bg-[#00A88F] text-black font-semibold text-xs h-9 px-4"
               >
                 {isSaving ? (
-                  'Salvando...'
+                  'Salvando alterações...'
                 ) : (
                   <span className="flex items-center gap-1.5">
                     <Save className="h-3.5 w-3.5" />

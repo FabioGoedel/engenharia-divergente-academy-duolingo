@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, Mail, CheckCircle2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowLeft, Mail, CheckCircle2, Database } from 'lucide-react'
 import { Wordmark } from '@/components/Wordmark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { AuthService } from '@/services/authService'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -14,9 +16,8 @@ export default function ForgotPasswordPage() {
   const [sentSuccess, setSentSuccess] = useState(false)
 
   const { toast } = useToast()
-  const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) {
       toast({
@@ -28,47 +29,60 @@ export default function ForgotPasswordPage() {
     }
 
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      const result = await AuthService.sendPasswordResetEmail(email)
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro na solicitação',
+          description: result.error,
+        })
+        return
+      }
+
       setSentSuccess(true)
       toast({
-        title: 'Link de recuperação simulado',
-        description:
-          'Modo demonstração: o envio foi registrado em memória. Em ambiente real, o Supabase Auth enviaria um token temporário.',
+        title: 'Instruções enviadas',
+        description: `Se houver uma conta associada a ${email}, o link de recuperação foi enviado pelo Supabase.`,
       })
-    }, 600)
+    } catch (err: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Falha inesperada',
+        description:
+          err instanceof Error ? err.message : 'Não foi possível processar a redefinição.',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-background">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <Wordmark size="lg" to="/" />
       </div>
 
       <Card className="w-full max-w-md border-border bg-card shadow-lg">
         <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
-            Recuperar senha
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+              Recuperar senha
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className="border-primary/40 text-primary text-[10px] font-mono flex items-center gap-1"
+            >
+              <Database className="h-3 w-3" />
+              <span>Supabase</span>
+            </Badge>
+          </div>
           <CardDescription className="text-xs text-muted-foreground">
-            Informe seu e-mail para receber as instruções de redefinição de credenciais.
+            Informe seu e-mail para receber as instruções seguras de redefinição de senha.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5">
-          {/* Banner Demo */}
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-500 flex items-start gap-2.5">
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-            <div className="leading-snug space-y-1">
-              <p className="font-semibold text-[11px] uppercase tracking-wide">
-                Simulação de Recuperação
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Serviço de disparo SMTP via Supabase marcado como PENDENTE na Fase 1.
-              </p>
-            </div>
-          </div>
-
           {sentSuccess ? (
             <div className="text-center py-6 space-y-4">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
@@ -77,7 +91,8 @@ export default function ForgotPasswordPage() {
               <div>
                 <h3 className="text-sm font-bold text-foreground">Instruções enviadas!</h3>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                  Enviamos o passo a passo demonstrativo para <strong>{email}</strong>.
+                  Enviamos o link de recuperação para <strong>{email}</strong>. Verifique sua caixa
+                  de entrada e spam.
                 </p>
               </div>
               <Button
@@ -110,7 +125,7 @@ export default function ForgotPasswordPage() {
                 className="w-full bg-[#01B59A] hover:bg-[#00A88F] text-black font-bold text-sm h-10 shadow-sm"
               >
                 {isSubmitting ? (
-                  'Processando solicitação...'
+                  'Enviando via Supabase...'
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <Mail className="h-4 w-4" />

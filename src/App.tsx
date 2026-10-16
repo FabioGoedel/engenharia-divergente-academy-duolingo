@@ -13,6 +13,7 @@ import IndexLanding from '@/pages/IndexLanding'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import UpdatePasswordPage from '@/pages/UpdatePasswordPage'
 import NotFound from '@/pages/NotFound'
 
 // Páginas do Aluno (/app)
@@ -29,6 +30,7 @@ import CertificatesPage from '@/pages/learner/CertificatesPage'
 // Páginas do Admin (/admin)
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import AdminStudentsPage from '@/pages/admin/AdminStudentsPage'
+import AdminUsersRbacPage from '@/pages/admin/AdminUsersRbacPage'
 import AdminCoursesPage from '@/pages/admin/AdminCoursesPage'
 import AdminEnrollmentsPage from '@/pages/admin/AdminEnrollmentsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
@@ -60,6 +62,7 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/cadastro" element={<RegisterPage />} />
                 <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
+                <Route path="/atualizar-senha" element={<UpdatePasswordPage />} />
 
                 {/* 2. Rotas do Aluno (Prefixo /app do prompt mestre) */}
                 <Route
@@ -199,6 +202,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/usuarios"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminUsersRbacPage />
                     </ProtectedRoute>
                   }
                 />

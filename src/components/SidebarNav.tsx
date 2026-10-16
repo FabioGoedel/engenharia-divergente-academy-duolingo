@@ -60,6 +60,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
       label: 'Editor Visual de Trilhas',
       icon: Sparkles,
     },
+    { to: '/admin/usuarios', label: 'Usuários & RBAC', icon: ShieldCheck },
     { to: '/admin/cursos', label: 'Cursos & Trilhas', icon: BookOpen },
     { to: '/admin/importar', label: 'Importação em Massa', icon: UploadCloud },
     { to: '/admin/painel', label: 'Painel Admin', icon: BarChart3 },

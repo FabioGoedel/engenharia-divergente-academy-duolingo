@@ -1,15 +1,24 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, AlertTriangle, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import {
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  ArrowRight,
+  ShieldCheck,
+  Database,
+  Sparkles,
+  CheckCircle2,
+} from 'lucide-react'
 import { Wordmark } from '@/components/Wordmark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { useAuth } from '@/contexts/AuthContext'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
-import { DEMO_USERS } from '@/data/demoData'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -18,17 +27,51 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { login } = useAuth()
+  const { login, loginDemo } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleSelectDemoAccount = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail)
-    setPassword(demoPass)
+  const redirectAfterLogin = (role: string) => {
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname
+    if (from && from !== '/login') {
+      navigate(from, { replace: true })
+    } else if (role === 'admin' || role === 'super_admin') {
+      navigate('/admin/painel', { replace: true })
+    } else {
+      navigate('/app', { replace: true })
+    }
+  }
+
+  // Preenchimento e login direto com conta demo isolada
+  const handleSelectDemoAccount = async (demoEmail: string) => {
+    setIsSubmitting(true)
+    try {
+      const demoUser = await loginDemo(demoEmail)
+      toast({
+        title: 'Modo Demonstração Ativo',
+        description: `Sessão isolada iniciada como ${demoUser.name} (${demoUser.role}). Nenhum dado de produção alterado.`,
+      })
+      redirectAfterLogin(demoUser.role)
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Falha no modo demo',
+        description: 'Não foi possível carregar a conta demonstrativa.',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Preenchimento rápido para o super_admin bootstrap no backend real
+  const handleFillBootstrapAccount = () => {
+    setEmail('fgoedel@gmail.com')
+    setPassword('Skip@Pass')
     toast({
       title: 'Credenciais preenchidas',
-      description: `Conta ${demoEmail.includes('admin') ? 'Administrador' : 'Aluno'} selecionada. Clique em "Entrar".`,
+      description:
+        'Conta de Administrador Mestre do banco real (fgoedel@gmail.com / Skip@Pass). Clique em "Entrar no Supabase".',
     })
   }
 
@@ -45,26 +88,30 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      const loggedUser = await login({ email, password, rememberMe })
-      toast({
-        title: 'Acesso autenticado (Modo Demo)',
-        description: `Bem-vindo(a), ${loggedUser.name}! Sessão ativa como ${loggedUser.role}.`,
-      })
-
-      // Redireciona para o destino ou área apropriada
-      const from = (location.state as { from?: { pathname: string } })?.from?.pathname
-      if (from && from !== '/login') {
-        navigate(from, { replace: true })
-      } else if (loggedUser.role === 'admin' || loggedUser.role === 'super_admin') {
-        navigate('/admin/painel', { replace: true })
-      } else {
-        navigate('/app', { replace: true })
+      const result = await login({ email, password, rememberMe })
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Falha na autenticação',
+          description: result.error,
+        })
+        setIsSubmitting(false)
+        return
       }
-    } catch {
+
+      if (result.user) {
+        toast({
+          title: 'Autenticado com sucesso no Supabase!',
+          description: `Bem-vindo(a), ${result.user.name}! Papel atribuído: ${result.user.role}.`,
+        })
+        redirectAfterLogin(result.user.role)
+      }
+    } catch (err: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Erro ao autenticar',
-        description: 'Não foi possível iniciar a sessão demo. Tente novamente.',
+        title: 'Erro inesperado',
+        description:
+          err instanceof Error ? err.message : 'Falha na conexão com o serviço de autenticação.',
       })
     } finally {
       setIsSubmitting(false)
@@ -74,22 +121,31 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-background">
       {/* Wordmark no Topo */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <Wordmark size="lg" to="/" />
       </div>
 
       <Card className="w-full max-w-md border-border bg-card shadow-lg">
         <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
-            Entrar na sua conta
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+              Entrar na sua conta
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className="border-primary/40 text-primary text-[10px] font-mono flex items-center gap-1"
+            >
+              <Database className="h-3 w-3" />
+              <span>Supabase Auth</span>
+            </Badge>
+          </div>
           <CardDescription className="text-xs text-muted-foreground">
-            Acesse o ambiente de aprendizado e simulações com rigor técnico.
+            Acesso seguro à Engenharia Divergente Academy com papéis e RLS integrados.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5">
-          {/* Formulário Principal */}
+          {/* Formulário Principal (Supabase Real) */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-semibold text-foreground">
@@ -127,6 +183,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  required
                   className="bg-background border-border text-foreground text-sm pr-10"
                 />
                 <button
@@ -150,7 +207,7 @@ export default function LoginPage() {
                 htmlFor="remember"
                 className="text-xs text-muted-foreground font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
-                Lembrar deste dispositivo
+                Manter sessão conectada
               </label>
             </div>
 
@@ -160,15 +217,37 @@ export default function LoginPage() {
               className="w-full bg-[#01B59A] hover:bg-[#00A88F] text-black font-bold text-sm h-10 shadow-sm"
             >
               {isSubmitting ? (
-                'Autenticando...'
+                'Autenticando via Supabase...'
               ) : (
                 <span className="flex items-center justify-center gap-2">
-                  <span>Entrar</span>
+                  <span>Entrar com Supabase Auth</span>
                   <ArrowRight className="h-4 w-4" />
                 </span>
               )}
             </Button>
           </form>
+
+          {/* Dica da Conta Real Bootstrap */}
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-xs text-foreground flex items-center justify-between">
+            <div className="space-y-0.5 pr-2">
+              <p className="font-bold text-[11px] text-primary flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Conta Mestre Supabase (Seed Ativo)
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                <strong className="text-foreground">fgoedel@gmail.com</strong> (super_admin)
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFillBootstrapAccount}
+              className="text-xs border-primary/40 text-primary hover:bg-primary/20 shrink-0"
+            >
+              Preencher
+            </Button>
+          </div>
 
           {/* Divisor */}
           <div className="relative my-4">
@@ -177,21 +256,21 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-[10px] uppercase font-mono tracking-wider">
               <span className="bg-card px-2 text-muted-foreground">
-                ou selecione conta de demonstração
+                ou acesse via modo demo isolado
               </span>
             </div>
           </div>
 
-          {/* Banner de Aviso do Modo Demo */}
+          {/* Banner de Aviso do Modo Demo Isolado */}
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-500 flex items-start gap-2.5">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
             <div className="leading-snug space-y-1">
               <p className="font-semibold text-[11px] uppercase tracking-wide">
-                Modo Demonstração Ativo (Fase 1)
+                Contas Demonstrativas Isoladas
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Nenhum dado real é salvo ou compartilhado. Clique em uma das credenciais abaixo para
-                preencher o formulário:
+                Ambiente local sem gravação no banco de produção. Nenhum privilégio real é
+                concedido.
               </p>
             </div>
           </div>
@@ -200,7 +279,8 @@ export default function LoginPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => handleSelectDemoAccount('aluno@demo.com', 'demo123')}
+              onClick={() => handleSelectDemoAccount('aluno@demo.com')}
+              disabled={isSubmitting}
               className="p-3 text-left rounded-lg border border-border bg-background hover:border-[#01B59A] hover:bg-muted/60 transition-all text-xs group"
             >
               <div className="flex items-center justify-between mb-1">
@@ -212,12 +292,13 @@ export default function LoginPage() {
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground font-mono truncate">aluno@demo.com</p>
-              <p className="text-[10px] text-muted-foreground mt-1">senha: demo123</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Clique para entrar</p>
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectDemoAccount('editor@demo.com', 'demo123')}
+              onClick={() => handleSelectDemoAccount('editor@demo.com')}
+              disabled={isSubmitting}
               className="p-3 text-left rounded-lg border border-border bg-background hover:border-[#01B59A] hover:bg-muted/60 transition-all text-xs group"
             >
               <div className="flex items-center justify-between mb-1">
@@ -231,12 +312,13 @@ export default function LoginPage() {
               <p className="text-[11px] text-muted-foreground font-mono truncate">
                 editor@demo.com
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">senha: demo123</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Clique para entrar</p>
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectDemoAccount('admin@demo.com', 'demo123')}
+              onClick={() => handleSelectDemoAccount('admin@demo.com')}
+              disabled={isSubmitting}
               className="p-3 text-left rounded-lg border border-border bg-background hover:border-[#C69B4B] hover:bg-muted/60 transition-all text-xs group"
             >
               <div className="flex items-center justify-between mb-1">
@@ -248,14 +330,14 @@ export default function LoginPage() {
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground font-mono truncate">admin@demo.com</p>
-              <p className="text-[10px] text-muted-foreground mt-1">senha: demo123</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Clique para entrar</p>
             </button>
           </div>
 
           {/* Link para Cadastro */}
           <div className="text-center pt-2">
             <p className="text-xs text-muted-foreground">
-              Não tem uma conta demonstrativa?{' '}
+              Ainda não possui conta no Supabase?{' '}
               <Link to="/cadastro" className="text-primary hover:underline font-semibold">
                 Cadastre-se aqui
               </Link>

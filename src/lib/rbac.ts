@@ -19,7 +19,8 @@ export interface User {
   creaNumber?: string
   streakDays: number
   totalXp: number
-  isDemo: true
+  isDemo?: boolean
+  emailConfirmed?: boolean
 }
 
 export type Permission =
