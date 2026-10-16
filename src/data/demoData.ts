@@ -12,7 +12,7 @@
 
 export const IS_DEMO = true
 export const DEMO_NOTICE_TEXT =
-  'Modo demonstração ativo — nenhum dado real é salvo ou compartilhado. Integração com banco de dados marcada como PENDENTE (Fase 1).'
+  'Modo demonstração ativo — você está navegando com uma conta de teste local isolada.'
 
 export type Role = 'student' | 'content_editor' | 'admin' | 'super_admin'
 

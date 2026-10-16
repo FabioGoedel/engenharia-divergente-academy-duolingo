@@ -48,12 +48,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
+      <div className="flex min-h-[50vh] h-full items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-            Carregando ambiente...
-          </p>
+          <p className="text-xs tracking-wider text-muted-foreground font-medium">Carregando...</p>
         </div>
       </div>
     )
@@ -61,6 +59,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // Se o usuário está autenticado mas seu papel ainda está indefinido (null), aguarda carregar perfil sem chutar
+  if (requiredRole && !role) {
+    return (
+      <div className="flex min-h-[50vh] h-full items-center justify-center bg-background text-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-xs tracking-wider text-muted-foreground font-medium">
+            Verificando permissões...
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Checagem de rota editorial (content_editor, admin, super_admin)

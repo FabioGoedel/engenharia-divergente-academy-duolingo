@@ -110,7 +110,7 @@ export const LearnerBlockViewerPage: React.FC = () => {
             </Link>
             <span className="text-[#A8BBC0]">•</span>
             <Badge variant="outline" className="text-[10px] border-[#01B59A]/40 text-[#01B59A]">
-              Experiência do Aluno (Fase 2)
+              Visualização de Bloco
             </Badge>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white mt-1">

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { SanitizedMarkdownViewer } from '@/components/cms/SanitizedMarkdownViewer'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -402,9 +403,9 @@ export default function DiagnosticAssessmentPage() {
                 </span>
               </div>
               <CardTitle className="text-white text-base">{currentQ.title}</CardTitle>
-              <CardDescription className="text-xs text-[#E6EAED] mt-2 leading-relaxed">
-                {currentQ.prompt}
-              </CardDescription>
+              <div className="text-xs text-[#E6EAED] mt-2 leading-relaxed">
+                <SanitizedMarkdownViewer content={currentQ.prompt} />
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-2">
               {currentQ.options.map((opt) => {
@@ -419,7 +420,7 @@ export default function DiagnosticAssessmentPage() {
                         : 'border-[#294149] bg-[#0C1317] text-[#A8BBC0] hover:border-[#294149]/80 hover:text-white'
                     }`}
                   >
-                    {opt.text}
+                    <SanitizedMarkdownViewer content={opt.text} />
                   </div>
                 )
               })}

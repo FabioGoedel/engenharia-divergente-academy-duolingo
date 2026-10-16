@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { SidebarNav } from '@/components/SidebarNav'
 import { Topbar } from '@/components/Topbar'
+import { LearnerBottomNavigation } from '@/components/navigation/LearnerBottomNavigation'
 import { DemoNoticeBanner } from '@/components/DemoNoticeBanner'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useAuth } from '@/contexts/AuthContext'
@@ -52,23 +53,21 @@ export default function Layout() {
         <div className="flex flex-1 flex-col lg:pl-72 w-full">
           <Topbar onToggleMobileNav={() => setMobileOpen(true)} />
 
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 max-w-7xl w-full mx-auto fade-in-up">
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 max-w-7xl w-full mx-auto fade-in-up pb-20 lg:pb-8">
             <Outlet />
           </main>
 
-          <footer className="border-t border-border/60 py-4 px-4 md:px-8 text-center md:text-right text-xs text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full">
+          {/* Navegação Inferior para Smartphone */}
+          <LearnerBottomNavigation />
+
+          <footer className="border-t border-border/40 py-4 px-4 md:px-8 text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#01B59A]" />
-              <span className="font-semibold text-foreground">Engenharia Divergente Academy</span>
-              <span>• Fase 1 (Núcleo Seguro & RBAC)</span>
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span className="font-medium text-foreground">Engenharia Divergente Academy</span>
             </div>
-            <div className="flex items-center gap-3 font-mono text-[11px]">
-              <span>Ambiente de Demonstração</span>
-              <span>•</span>
-              <span className="text-[#C69B4B]">Supabase PENDENTE</span>
-              <span>•</span>
-              <span>v1.0.0-demo</span>
-            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Aprendizagem contínua para engenheiros
+            </p>
           </footer>
         </div>
       </div>

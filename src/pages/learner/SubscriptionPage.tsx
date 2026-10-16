@@ -21,8 +21,7 @@ export default function SubscriptionPage() {
   const handleCheckoutClick = () => {
     toast({
       title: 'Módulo de Pagamentos / Checkout',
-      description:
-        'Status: PENDENTE (Fase 2). A integração com gateway Asaas/Stripe será implementada nas próximas fases.',
+      description: 'A ativação de novas assinaturas e planos está em processo de liberação.',
     })
   }
 

@@ -35,7 +35,7 @@ export const DemoNoticeBanner: React.FC<DemoNoticeBannerProps> = ({ compact = fa
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="font-bold text-[#C69B4B] uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-[#C69B4B]/10 border border-[#C69B4B]/30">
-            Fase 1 • Ambiente Demonstrativo
+            Ambiente Demonstrativo
           </span>
           <span className="text-muted-foreground">{DEMO_NOTICE_TEXT}</span>
         </div>

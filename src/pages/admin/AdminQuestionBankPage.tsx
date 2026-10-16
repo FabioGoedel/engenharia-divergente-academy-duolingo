@@ -508,17 +508,23 @@ export const AdminQuestionBankPage: React.FC = () => {
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-[#01B59A]">{opt.label})</span>
-                          <span className="font-medium text-white">{opt.textMarkdown}</span>
+                          <div className="font-medium text-white flex-1">
+                            <SanitizedMarkdownViewer content={opt.textMarkdown} />
+                          </div>
                           {isCorrect && (
-                            <Badge className="bg-[#01B59A] text-black text-[9px] uppercase font-mono ml-auto">
+                            <Badge className="bg-[#01B59A] text-black text-[9px] uppercase font-mono ml-auto shrink-0">
                               Gabarito
                             </Badge>
                           )}
                         </div>
                         {opt.distractorRationale && (
-                          <p className="text-[11px] italic text-[#A8BBC0] pl-5 border-t border-white/5 pt-1">
-                            Justificativa: {opt.distractorRationale}
-                          </p>
+                          <div className="text-[11px] italic text-[#A8BBC0] pl-5 border-t border-white/5 pt-1">
+                            Justificativa:{' '}
+                            <SanitizedMarkdownViewer
+                              content={opt.distractorRationale}
+                              className="inline"
+                            />
+                          </div>
                         )}
                       </div>
                     )

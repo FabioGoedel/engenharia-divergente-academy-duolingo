@@ -1,4 +1,5 @@
 /* Global styles - Theme, font, utilities, animations and Engenharia Divergente design system tokens */
+@import 'katex/dist/katex.min.css';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;

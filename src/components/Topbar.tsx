@@ -19,19 +19,21 @@ interface TopbarProps {
 }
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/app': 'Painel Pessoal',
-  '/app/trilhas': 'Trilhas de Aprendizagem',
+  '/app': 'Início',
+  '/app/trilhas': 'Aprender',
   '/app/meus-cursos': 'Meus Cursos',
-  '/app/progresso': 'Progresso & Competências',
-  '/app/conquistas': 'Conquistas & Gamificação',
-  '/app/assinatura': 'Assinatura & Entitlements',
+  '/app/revisar': 'Revisar',
+  '/app/biblioteca': 'Biblioteca',
+  '/app/progresso': 'Progresso',
+  '/app/conquistas': 'Conquistas',
+  '/app/assinatura': 'Minha Assinatura',
   '/app/perfil': 'Meu Perfil',
-  '/admin/painel': 'Painel de Controle Administrativo',
-  '/admin/usuarios': 'Gestão de Usuários e RBAC',
+  '/admin/painel': 'Visão Geral',
+  '/admin/usuarios': 'Controle de Acesso',
   '/admin/alunos': 'Gestão de Alunos',
-  '/admin/cursos': 'Catálogo de Cursos & Trilhas',
-  '/admin/matriculas': 'Matrículas & Entitlements',
-  '/admin/relatorios': 'Relatórios & Roadmap Fase 2',
+  '/admin/cursos': 'Catálogo de Trilhas',
+  '/admin/matriculas': 'Matrículas',
+  '/admin/gamificacao': 'Gamificação & Mentor',
 }
 
 export const Topbar: React.FC<TopbarProps> = ({ onToggleMobileNav }) => {
@@ -67,9 +69,6 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleMobileNav }) => {
           <h1 className="text-base md:text-lg font-bold tracking-tight text-foreground">
             {getPageTitle()}
           </h1>
-          <p className="hidden md:block text-[11px] text-muted-foreground font-mono">
-            Engenharia Divergente • Ambiente LMS
-          </p>
         </div>
       </div>
 
@@ -167,7 +166,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleMobileNav }) => {
                 className="flex items-center gap-2 cursor-pointer text-xs text-[#C86F63] focus:text-[#C86F63]"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span>Encerrar sessão demo</span>
+                <span>Sair da conta</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

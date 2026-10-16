@@ -61,7 +61,7 @@ import {
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user, authMode, refreshUser } = useAuth()
+  const { user, authMode, isAdmin, refreshUser } = useAuth()
   const { toast } = useToast()
   const isRealMode = authMode === 'real' && Boolean(user?.id && !user.id.startsWith('demo-'))
 
@@ -471,28 +471,30 @@ export const ActivityPlayerPage: React.FC = () => {
 
         {/* Placar Gamificado Sóbrio de Progresso e XP */}
         <div className="flex items-center gap-3 shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRunDiagnostics}
-            className="border-[#294149] text-xs text-[#A8BBC0] hover:text-[#01B59A] font-mono h-9"
-            title="Executar verificação de cálculo, tolerância e idempotência"
-          >
-            <ShieldAlert className="h-3.5 w-3.5 mr-1 text-[#01B59A]" />
-            Testes Técnicos
-          </Button>
+          {isAdmin && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRunDiagnostics}
+              className="border-border text-xs text-muted-foreground hover:text-primary font-mono h-9"
+              title="Executar verificação de cálculo, tolerância e idempotência"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 mr-1 text-primary" />
+              Testes Técnicos
+            </Button>
+          )}
 
-          <div className="bg-[#152228] border border-[#294149] rounded-xl px-3 py-1.5 text-right font-mono">
-            <span className="text-[10px] text-[#A8BBC0] block uppercase">XP na Sessão</span>
-            <span className="text-base font-bold text-[#01B59A]">
+          <div className="bg-card border border-border rounded-xl px-3 py-1.5 text-right font-mono">
+            <span className="text-[10px] text-muted-foreground block uppercase">XP</span>
+            <span className="text-base font-bold text-primary">
               +{progress?.totalXpEarned || 0} XP
             </span>
           </div>
 
-          <div className="bg-[#152228] border border-[#294149] rounded-xl px-3 py-1.5 text-right font-mono">
-            <span className="text-[10px] text-[#A8BBC0] block uppercase">Progresso</span>
-            <span className="text-sm font-bold text-white">
+          <div className="bg-card border border-border rounded-xl px-3 py-1.5 text-right font-mono">
+            <span className="text-[10px] text-muted-foreground block uppercase">Progresso</span>
+            <span className="text-sm font-bold text-foreground">
               {progress?.completedExerciseIds.length || 0} / {exercises.length}
             </span>
           </div>
@@ -539,23 +541,24 @@ export const ActivityPlayerPage: React.FC = () => {
       </div>
 
       {/* Card Principal do Exercício Ativo */}
-      <div className="rounded-2xl border border-[#294149] bg-[#0C1317] p-5 sm:p-7 shadow-2xl space-y-6">
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-lg space-y-6">
         {/* Cabeçalho do Exercício */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#294149] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge className="bg-[#152228] text-[#01B59A] border border-[#294149] text-[10px] font-mono">
-                Exercício {currentExercise.order} de {exercises.length}
+              <Badge
+                variant="outline"
+                className="border-primary/40 text-primary text-[10px] font-mono"
+              >
+                Questão {currentExercise.order} de {exercises.length}
               </Badge>
-              <span className="text-[11px] font-mono text-[#A8BBC0]">
-                {currentExercise.competencyCode}
-              </span>
-              <span className="text-[11px] font-mono text-[#A8BBC0]">•</span>
-              <span className="text-[11px] font-mono text-[#01B59A]">
-                +{currentExercise.xpRewardBase} XP base
+              <span className="text-[11px] font-mono text-muted-foreground">
+                +{currentExercise.xpRewardBase} XP
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white">{currentExercise.title}</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">
+              {currentExercise.title}
+            </h2>
           </div>
 
           <div className="flex items-center gap-2">
@@ -600,7 +603,7 @@ export const ActivityPlayerPage: React.FC = () => {
         )}
 
         {/* Enunciado Formatado em Markdown e LaTeX */}
-        <div className="text-sm leading-relaxed text-[#E6EAED]">
+        <div className="text-sm sm:text-base leading-relaxed text-foreground max-w-3xl">
           <SanitizedMarkdownViewer content={currentExercise.promptMarkdown} />
         </div>
 
@@ -693,68 +696,55 @@ export const ActivityPlayerPage: React.FC = () => {
           )}
         </div>
 
-        {/* FEEDBACK COMENTADO APÓS SUBMISSÃO */}
+        {/* FEEDBACK COMENTADO APÓS SUBMISSÃO EM CAMADAS */}
         {lastGrade && (
-          <div className="rounded-xl border border-[#294149] bg-[#152228] p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#294149] pb-3">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
                 {lastGrade.isCorrect ? (
-                  <span className="text-[#01B59A] flex items-center gap-1.5 font-bold text-sm">
-                    <CheckCircle2 className="h-5 w-5" /> Resposta Correta!
+                  <span className="text-primary flex items-center gap-1.5 font-bold text-sm">
+                    <CheckCircle2 className="h-5 w-5" /> Correto!
                   </span>
                 ) : (
-                  <span className="text-[#C86F63] flex items-center gap-1.5 font-bold text-sm">
-                    <XCircle className="h-5 w-5" /> Resposta Incorreta
+                  <span className="text-destructive flex items-center gap-1.5 font-bold text-sm">
+                    <XCircle className="h-5 w-5" /> Resposta incorreta
                   </span>
                 )}
               </div>
 
               {lastGrade.isCorrect && (
-                <Badge className="bg-[#01B59A] text-black font-mono font-bold text-xs">
-                  +{lastGrade.xpEarned} XP Concedidos
+                <Badge className="bg-primary text-primary-foreground font-mono font-bold text-xs">
+                  +{lastGrade.xpEarned} XP
                 </Badge>
               )}
             </div>
 
             {/* Justificativa do distrator se aplicável */}
             {lastGrade.feedbackRationale && (
-              <div className="p-3 rounded-lg bg-[#0C1317] border border-[#294149] text-xs space-y-1">
-                <span className="font-mono text-[#01B59A] font-bold block">
-                  Análise da sua escolha:
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60 text-xs space-y-1">
+                <span className="font-mono text-primary font-bold block">
+                  Por que esta opção foi analisada:
                 </span>
-                <p className="text-[#E6EAED]">{lastGrade.feedbackRationale}</p>
+                <p className="text-foreground leading-relaxed">{lastGrade.feedbackRationale}</p>
               </div>
             )}
 
-            {/* Detalhes numéricos de tolerância */}
-            {lastGrade.numericDetails && (
-              <div className="p-3 rounded-lg bg-[#0C1317] border border-[#294149] text-xs font-mono space-y-1 text-[#A8BBC0]">
-                <div>
-                  Valor esperado:{' '}
-                  <span className="text-white font-bold">
-                    {lastGrade.numericDetails.expected} {lastGrade.numericDetails.unit}
-                  </span>{' '}
-                  (Tolerância: ±{lastGrade.numericDetails.tolerance})
+            {/* Resolução Técnica Completa com LaTeX (Colapsável/Em camadas) */}
+            <div className="space-y-2 pt-1">
+              <details
+                className="group rounded-lg border border-border/60 bg-muted/20 p-3"
+                open={lastGrade.isCorrect}
+              >
+                <summary className="text-xs font-bold uppercase tracking-wider text-foreground cursor-pointer select-none flex items-center justify-between">
+                  <span>Entenda a solução detalhada</span>
+                  <span className="text-muted-foreground text-[10px] font-mono group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
+                </summary>
+                <div className="text-xs leading-relaxed text-foreground pt-3 border-t border-border/40 mt-2">
+                  <SanitizedMarkdownViewer content={lastGrade.explanationMarkdown} />
                 </div>
-                {lastGrade.numericDetails.userParsedValue !== undefined && (
-                  <div>
-                    Valor computado da sua entrada:{' '}
-                    <span className="text-[#01B59A]">
-                      {lastGrade.numericDetails.userParsedValue} {lastGrade.numericDetails.unit}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Resolução Técnica Completa com LaTeX */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-white block">
-                Comentário Técnico & Resolução:
-              </span>
-              <div className="text-xs leading-relaxed text-[#A8BBC0] pt-1 border-t border-[#294149]">
-                <SanitizedMarkdownViewer content={lastGrade.explanationMarkdown} />
-              </div>
+              </details>
             </div>
 
             {/* Avaliação de Dificuldade Percebida (1-5) e "Acertei, mas não tinha certeza" */}

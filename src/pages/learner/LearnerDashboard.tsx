@@ -1,93 +1,29 @@
 import React, { useEffect, useState } from 'react'
-import {
-  Sparkles,
-  Flame,
-  Clock,
-  BookOpen,
-  Award,
-  ChevronRight,
-  Target,
-  Play,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle,
-  TrendingUp,
-  FileText,
-  Compass,
-  ArrowRight,
-} from 'lucide-react'
+import { Sparkles, Flame, Clock, RotateCcw, ArrowRight, BookOpen, CheckCircle2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
-import {
-  GamificationService,
-  GamificationLevel,
-  StudentDailyGoal,
-} from '@/services/gamificationService'
-import {
-  MotivationalService,
-  ContextualMessageConfig,
-  MentorVideoConfig,
-} from '@/services/motivationalService'
-import {
-  AdaptiveProgressionService,
-  AdaptiveRecommendation,
-} from '@/services/adaptiveProgressionService'
-import {
-  CommercialRelationshipService,
-  CommercialCampaign,
-} from '@/services/commercialRelationshipService'
-import { Megaphone } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { GamificationService } from '@/services/gamificationService'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { UniversalVideoPlayer } from '@/components/media/UniversalVideoPlayer'
 
-interface RealDashboardData {
-  totalXp: number
-  streakDays: number
-  activeTodayMinutes: number
-  activeWeekHours: number
-  targetMinutes: number
-  completedMissionsCount: number
-  pendingReviewsCount: number
-  unlockedAchievementsCount: number
-  totalAchievementsCount: number
-  currentLevel: GamificationLevel
-  nextLevel?: GamificationLevel
-  levelProgressPercent: number
-  xpToNext: number
-  nextActivity: {
-    missionId: string
-    title: string
-    trackTitle: string
-    trackSlug: string
-    estimatedMinutes: number
-    xpReward: number
-    exerciseNumber: number
-    totalExercises: number
-  } | null
-  myCourses: Array<{
-    id: string
-    title: string
-    code: string
-    category: string
-    progressPercent: number
-    slug: string
-  }>
-  recentMaterials: Array<{
-    id: string
-    title: string
-    assetType: string
-    fileExtension?: string
-  }>
-  developingCompetencies: Array<{
-    code: string
-    masteryPercent: number
-    answeredCount: number
-  }>
+interface NextMissionInfo {
+  missionId: string
+  title: string
+  trackTitle: string
+  trackSlug: string
+  estimatedMinutes: number
+  xpReward: number
+  isReview?: boolean
+}
+
+interface TrackCardInfo {
+  id: string
+  title: string
+  slug: string
+  progressPercent: number
+  totalHours: number
 }
 
 export default function LearnerDashboard() {
@@ -96,996 +32,352 @@ export default function LearnerDashboard() {
   const userId = user?.id || 'demo-student-user'
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<RealDashboardData | null>(null)
-  const [hasEnrollment, setHasEnrollment] = useState<boolean>(true)
-  const [contextualMsg, setContextualMsg] = useState<ContextualMessageConfig | null>(null)
-  const [mentorVideo, setMentorVideo] = useState<MentorVideoConfig | null>(null)
-  const [showVideoModal, setShowVideoModal] = useState(false)
-  const [goalDialog, setGoalDialog] = useState(false)
-  const [selectedGoalOption, setSelectedGoalOption] = useState<number>(15)
-  const [adaptiveRec, setAdaptiveRec] = useState<AdaptiveRecommendation | null>(null)
-  const [commercialCampaign, setCommercialCampaign] = useState<CommercialCampaign | null>(null)
+  const [totalXp, setTotalXp] = useState(0)
+  const [streakDays, setStreakDays] = useState(1)
+  const [targetMinutes, setTargetMinutes] = useState(15)
+  const [activeTodayMinutes, setActiveTodayMinutes] = useState(0)
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0)
+  const [nextMission, setNextMission] = useState<NextMissionInfo | null>(null)
+  const [tracks, setTracks] = useState<TrackCardInfo[]>([])
 
   useEffect(() => {
-    async function loadDashboard() {
+    async function loadData() {
       setLoading(true)
-      setError(null)
       try {
-        // Registra telemetria de abertura
-        MotivationalService.recordTelemetry(userId, 'dashboard_opened')
-
-        // 1. Busca níveis e XP
-        const levels = await GamificationService.listLevels()
-        const dailyGoal = await GamificationService.getStudentDailyGoal(userId)
-
-        // 2. Busca dados de perfil e progresso real
-        let totalXp = user?.totalXp || 0
-        let streakDays = user?.streakDays || 1
+        let currentXp = user?.totalXp || 0
+        let currentStreak = user?.streakDays || 1
 
         if (isReal) {
-          const { data: pRow, error: pErr } = await (supabase as any)
+          // Busca perfil real no Supabase
+          const { data: pRow } = await supabase
             .from('profiles')
             .select('total_xp, streak_days')
             .eq('id', userId)
             .maybeSingle()
-          if (pErr) throw pErr
+
           if (pRow) {
-            totalXp = pRow.total_xp || 0
-            streakDays = pRow.streak_days || 1
+            currentXp = pRow.total_xp || 0
+            currentStreak = pRow.streak_days || 1
           }
-        }
 
-        const levelInfo = GamificationService.calculateLevelFromXp(totalXp, levels)
-
-        // 3. Verifica matrículas reais e produtos autorizados
-        let myCoursesList: Array<{
-          id: string
-          title: string
-          code: string
-          category: string
-          progressPercent: number
-          slug: string
-        }> = []
-
-        if (isReal) {
-          const { data: enrollments, error: enrErr } = await (supabase as any)
-            .from('enrollments')
-            .select('id, course_id, status, courses(id, title, slug, code)')
-            .eq('user_id', userId)
-            .eq('status', 'active')
-
-          if (enrErr) throw enrErr
-
-          if (enrollments && enrollments.length > 0) {
-            setHasEnrollment(true)
-            myCoursesList = enrollments.map((e: any) => ({
-              id: e.courses?.id || e.id,
-              title: e.courses?.title || 'Curso Matriculado',
-              code: e.courses?.code || 'ENR-01',
-              category: 'Engenharia Estrutural',
-              progressPercent: 20,
-              slug: e.courses?.slug || 'track-resmat-flexao',
-            }))
-          } else {
-            // Verifica também entitlements
-            const { data: entitlements } = await (supabase as any)
-              .from('entitlements')
-              .select('id, product_id, is_active, products(id, title, code, slug)')
-              .eq('user_id', userId)
-              .eq('is_active', true)
-
-            if (entitlements && entitlements.length > 0) {
-              setHasEnrollment(true)
-              myCoursesList = entitlements.map((ent: any) => ({
-                id: ent.products?.id || ent.id,
-                title: ent.products?.title || 'Trilha Autorizada',
-                code: ent.products?.code || 'PROD',
-                category: 'Mecânica Computacional',
-                progressPercent: 10,
-                slug: ent.products?.slug || 'track-resmat-flexao',
-              }))
-            } else {
-              setHasEnrollment(false)
-            }
-          }
-        } else {
-          // Modo demo
-          setHasEnrollment(true)
-          const { data: productsData } = await (supabase as any)
-            .from('products')
-            .select('*')
-            .eq('is_published', true)
-
-          myCoursesList = (productsData || []).map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            code: p.code,
-            category: p.category || 'Mecânica Computacional',
-            progressPercent: p.code === 'PROD-BASE-01' ? 40 : p.code === 'PROD-MEF-01' ? 15 : 0,
-            slug: p.slug || 'track-resmat-flexao',
-          }))
-        }
-
-        // 4. Busca competências em desenvolvimento
-        let developingCompetencies: Array<{
-          code: string
-          masteryPercent: number
-          answeredCount: number
-        }> = []
-        if (isReal) {
-          const { data: compRows } = await (supabase as any)
-            .from('student_competency_progress')
-            .select('*')
-            .eq('user_id', userId)
-            .order('last_assessed_at', { ascending: false })
-            .limit(4)
-
-          if (compRows && compRows.length) {
-            developingCompetencies = compRows.map((c: any) => ({
-              code: c.competency_code,
-              masteryPercent: Number(c.mastery_score_percent) || 0,
-              answeredCount: c.total_questions_answered || 0,
-            }))
-          }
-        } else {
-          developingCompetencies = [
-            {
-              code: 'COMP-RESMAT-01 (Equilíbrio e Linha Neutra)',
-              masteryPercent: 65,
-              answeredCount: 8,
-            },
-            { code: 'COMP-MEF-02 (Convergência de Malha)', masteryPercent: 40, answeredCount: 4 },
-          ]
-        }
-
-        // 5. Materiais recentes
-        const { data: recentMedia } = await (supabase as any)
-          .from('media_assets')
-          .select('id, title, asset_type, file_extension')
-          .limit(4)
-
-        const recentMaterials = (recentMedia || []).map((m: any) => ({
-          id: m.id,
-          title: m.title,
-          assetType: m.asset_type,
-          fileExtension: m.file_extension,
-        }))
-
-        // 6. Próxima Atividade Recomendada Real (trilha canônica)
-        const nextActivity =
-          hasEnrollment || !isReal
-            ? {
-                missionId: 'mis-resmat-flexao-01',
-                title: 'Flexão de Vigas: Tensões Normais & Linha Neutra',
-                trackTitle: 'Trilha Canônica: Fundamentos de Flexão e MEF',
-                trackSlug: 'track-resmat-flexao',
-                estimatedMinutes: 25,
-                xpReward: 125,
-                exerciseNumber: 2,
-                totalExercises: 5,
-              }
-            : null
-
-        // 7. Horas ativas e contadores reais
-        let completedMissions = 0
-        let pendingReviews = 0
-        let activeWeekHours = 0
-
-        if (isReal) {
-          const { count: doneCount } = await (supabase as any)
-            .from('activity_attempts')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('status', 'completed')
-          completedMissions = doneCount || 0
-
-          const { count: revCount } = await (supabase as any)
+          // Busca revisões pendentes reais
+          const { count: revCount } = await supabase
             .from('review_schedule')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', userId)
             .eq('is_pending', true)
-          pendingReviews = revCount || 0
+          setPendingReviewsCount(revCount || 0)
 
-          activeWeekHours = Number(((dailyGoal.activeTodaySeconds || 0) / 3600).toFixed(1))
-        } else {
-          completedMissions = 1
-          pendingReviews = 2
-          activeWeekHours = 2.8
-        }
+          // Meta diária e tempo ativo
+          const dailyGoal = await GamificationService.getStudentDailyGoal(userId)
+          setTargetMinutes(dailyGoal.targetMinutes || 15)
+          setActiveTodayMinutes(Math.round((dailyGoal.activeTodaySeconds || 0) / 60))
 
-        // 8. Busca conquistas desbloqueadas reais
-        let unlockedCount = 0
-        let totalAch = 8
-        try {
-          const achs = await GamificationService.listAchievementsForStudent(userId)
-          unlockedCount = achs.filter((a) => a.earned).length
-          totalAch = achs.length || 8
-        } catch {
-          unlockedCount = 0
-        }
+          // Busca matrículas reais com progresso real calculado de student_activity_progress
+          const { data: enrollments } = await (supabase.from('enrollments' as any) as any)
+            .select('id, product_id, progress_percent, products(id, title, slug, workload_hours)')
+            .eq('user_id', userId)
+            .eq('status', 'active')
 
-        setData({
-          totalXp,
-          streakDays,
-          activeTodayMinutes: Math.round(dailyGoal.activeTodaySeconds / 60),
-          activeWeekHours,
-          targetMinutes: dailyGoal.targetMinutes,
-          completedMissionsCount: completedMissions,
-          pendingReviewsCount: pendingReviews,
-          unlockedAchievementsCount: unlockedCount,
-          totalAchievementsCount: totalAch,
-          currentLevel: levelInfo.currentLevel,
-          nextLevel: levelInfo.nextLevel,
-          levelProgressPercent: levelInfo.progressPercent,
-          xpToNext: levelInfo.xpToNext,
-          nextActivity,
-          myCourses: myCoursesList,
-          recentMaterials,
-          developingCompetencies,
-        })
-        setSelectedGoalOption(dailyGoal.targetMinutes)
-
-        // 7. Busca mensagem contextual pedagógica (respeitando tom sóbrio)
-        const msg = await MotivationalService.getContextualMessage(userId, 'first_access')
-        if (msg) {
-          setContextualMsg(msg)
-          MotivationalService.recordMessageImpression(userId, msg.id, 'first_access')
-        }
-
-        // 8. Busca vídeo de boas-vindas / pedagógico do mentor se houver
-        const vid = await MotivationalService.getMentorVideoForEvent(userId, 'first_access')
-        if (vid) {
-          setMentorVideo(vid)
-        }
-
-        // 9. Fase 5 Pacote B: Motor Adaptativo & Recomendação Determinística
-        try {
-          const rec = await AdaptiveProgressionService.computeAdaptiveRecommendation(
-            userId,
-            'track-resmat-flexao',
-          )
-          setAdaptiveRec(rec)
-        } catch (e) {
-          console.warn('Erro ao carregar recomendação adaptativa:', e)
-        }
-
-        // 10. Fase 5 Pacote B: Oferta Comercial Discreta Contextual (respeitando entitlements)
-        try {
-          const camp = await CommercialRelationshipService.getEligibleCampaignForStudent(
-            userId,
-            'dashboard_contextual',
-          )
-          if (camp) {
-            setCommercialCampaign(camp)
-            await CommercialRelationshipService.recordCampaignImpression(camp.id, userId)
+          if (enrollments && enrollments.length > 0) {
+            const list: TrackCardInfo[] = enrollments.map((enr: any) => ({
+              id: enr.products?.id || enr.id,
+              title: enr.products?.title || 'Trilha de Engenharia',
+              slug: enr.products?.slug || 'track-resmat-flexao',
+              progressPercent: Number(enr.progress_percent) || 0,
+              totalHours: enr.products?.workload_hours || 40,
+            }))
+            setTracks(list)
+            setNextMission({
+              missionId: 'mis-resmat-flexao-01',
+              title: 'Flexão de Vigas: Tensões Normais & Linha Neutra',
+              trackTitle: list[0]?.title || 'Fundamentos de Flexão',
+              trackSlug: list[0]?.slug || 'track-resmat-flexao',
+              estimatedMinutes: 5,
+              xpReward: 20,
+            })
+          } else {
+            // Conta real sem matrícula ainda
+            setTracks([])
+            setNextMission(null)
           }
-        } catch (e) {
-          console.warn('Erro ao carregar campanha comercial:', e)
+        } else {
+          // Modo demo
+          currentXp = user?.totalXp || 120
+          currentStreak = user?.streakDays || 3
+          setPendingReviewsCount(1)
+          setTargetMinutes(15)
+          setActiveTodayMinutes(10)
+          setTracks([
+            {
+              id: 'track-resmat-01',
+              title: 'Fundamentos de Flexão & MEF',
+              slug: 'track-resmat-flexao',
+              progressPercent: 20,
+              totalHours: 40,
+            },
+          ])
+          setNextMission({
+            missionId: 'mis-resmat-flexao-01',
+            title: 'Flexão de Vigas: Linha Neutra e Momento de Inércia',
+            trackTitle: 'Fundamentos de Flexão & MEF',
+            trackSlug: 'track-resmat-flexao',
+            estimatedMinutes: 5,
+            xpReward: 20,
+          })
         }
-      } catch (err: any) {
-        console.warn('Erro ao montar dashboard do aluno:', err)
-        setError(err?.message || 'Falha ao sincronizar dados do painel do aluno.')
+
+        setTotalXp(currentXp)
+        setStreakDays(currentStreak)
+      } catch (err) {
+        console.warn('Erro ao carregar dados do dashboard:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    loadDashboard()
+    loadData()
   }, [userId, isReal, user?.totalXp, user?.streakDays])
 
-  // Salva alteração de meta diária
-  const handleSaveGoal = async (minutes: number) => {
-    try {
-      await GamificationService.updateDailyGoal(userId, minutes)
-      setSelectedGoalOption(minutes)
-      if (data) {
-        setData({ ...data, targetMinutes: minutes })
-      }
-      setGoalDialog(false)
-    } catch (err) {
-      console.warn('Erro ao atualizar meta:', err)
-    }
-  }
+  const firstName = user?.name?.split(' ')[0] || 'Engenheiro'
 
   if (loading) {
     return (
-      <div className="py-24 text-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#01B59A] border-t-transparent mx-auto" />
-        <p className="text-xs font-mono text-[#A8BBC0] uppercase tracking-wider">
-          Carregando dados reais do aluno...
-        </p>
+      <div className="py-20 text-center space-y-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+        <p className="text-xs text-muted-foreground font-medium">Carregando painel...</p>
       </div>
     )
   }
-
-  // Estado de Erro (Item 2)
-  if (error) {
-    return (
-      <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
-        <div className="p-5 rounded-2xl border border-[#C86F63]/50 bg-[#C86F63]/10 text-white space-y-2">
-          <AlertCircle className="h-8 w-8 text-[#C86F63] mx-auto" />
-          <h2 className="text-base font-bold">Erro ao carregar o Painel de Aprendizagem</h2>
-          <p className="text-xs text-[#A8BBC0]">{error}</p>
-        </div>
-        <Button
-          onClick={() => window.location.reload()}
-          variant="outline"
-          className="border-[#294149] text-white font-mono text-xs"
-        >
-          Tentar Novamente
-        </Button>
-      </div>
-    )
-  }
-
-  // Estado Sem Matrícula Ativa (Item 2)
-  if (isReal && !hasEnrollment) {
-    return (
-      <div className="max-w-3xl mx-auto py-12 space-y-6">
-        <div className="p-8 rounded-2xl border border-[#294149] bg-[#0C1317] text-center space-y-4 shadow-xl">
-          <Compass className="h-12 w-12 text-[#01B59A] mx-auto" />
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-white">Nenhuma matrícula ativa localizada</h2>
-            <p className="text-xs text-[#A8BBC0] max-w-lg mx-auto">
-              Sua conta ainda não possui matrículas ativas em cursos ou trilhas de engenharia.
-              Escolha uma trilha no catálogo para iniciar seu percurso formativo.
-            </p>
-          </div>
-          <div className="pt-2 flex justify-center gap-3">
-            <Button
-              asChild
-              className="bg-[#01B59A] text-black font-mono font-bold text-xs h-10 px-6"
-            >
-              <Link to="/app/trilhas">Explorar Catálogo de Trilhas</Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="border-[#294149] text-[#A8BBC0] text-xs h-10 font-mono"
-            >
-              <Link to="/app/biblioteca">Acessar Materiais Abertos</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const todayStr = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16">
-      {/* 1. MENSAGEM CONTEXTUAL PEDAGÓGICA (A3: tom sóbrio, motivador sem exagero, sem culpa) */}
-      {contextualMsg && (
-        <div className="rounded-2xl border border-[#01B59A]/30 bg-gradient-to-r from-[#01B59A]/10 via-[#152228] to-[#0C1317] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#01B59A]/20 border border-[#01B59A]/40 flex items-center justify-center text-[#01B59A] shrink-0 mt-0.5">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#01B59A] font-bold block">
-                {contextualMsg.title}
-              </span>
-              <p className="text-xs sm:text-sm text-[#E6EAED] leading-relaxed mt-0.5">
-                "{contextualMsg.messageText}"
-              </p>
-            </div>
-          </div>
-
-          {mentorVideo && (
-            <Button
-              size="sm"
-              onClick={() => setShowVideoModal(true)}
-              className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-mono font-bold text-xs shrink-0 h-9"
-            >
-              <Play className="h-3.5 w-3.5 mr-1.5 fill-current" />
-              Mensagem do Prof. Fábio
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* 1.1 FASE 5 PACOTE B: RECOMENDAÇÃO ADAPTATIVA & CAMPANHA COMERCIAL DISCRETA */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Recomendação Determinística do Motor Adaptativo */}
-        <Card className="bg-[#152228] border border-[#01B59A]/30">
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-[#01B59A] uppercase tracking-wider flex items-center gap-1.5">
-                <Compass className="h-3.5 w-3.5" />
-                Motor Adaptativo • Próximo Ponto
-              </span>
-              <Badge
-                variant="outline"
-                className="border-[#01B59A]/40 text-[#01B59A] text-[9px] font-mono"
-              >
-                {adaptiveRec?.recommendedStage
-                  ? adaptiveRec.recommendedStage.replace('stage_', 'Estágio ')
-                  : 'Personalizado'}
-              </Badge>
-            </div>
-            <CardTitle className="text-sm font-bold text-white mt-1">
-              {adaptiveRec?.title || 'Avaliação Diagnóstica de Nivelamento'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 space-y-3 text-xs">
-            <p className="text-[#A8BBC0] leading-relaxed text-[11px]">
-              {adaptiveRec?.explanation ||
-                'Realize o diagnóstico de nivelamento para receber exercícios com retirada gradual de assistência técnica.'}
-            </p>
-            <div className="flex items-center justify-between pt-1">
-              <Button
-                asChild
-                size="sm"
-                className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-bold font-mono text-[11px] h-8"
-              >
-                <Link to="/app/nivelamento">
-                  Fazer Nivelamento / Ver Ponto de Partida
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Campanha Comercial Contextual Discreta */}
-        {commercialCampaign ? (
-          <Card className="bg-[#152228] border border-[#C69B4B]/30">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-[#C69B4B] uppercase tracking-wider flex items-center gap-1.5">
-                  <Megaphone className="h-3.5 w-3.5" />
-                  Especialização Técnica • Engenharia Divergente
-                </span>
-                <Badge
-                  variant="outline"
-                  className="border-[#C69B4B]/40 text-[#C69B4B] text-[9px] font-mono"
-                >
-                  {commercialCampaign.targetProductCode}
-                </Badge>
-              </div>
-              <CardTitle className="text-sm font-bold text-white mt-1">
-                {commercialCampaign.headline}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-1 space-y-3 text-xs">
-              <p className="text-[#A8BBC0] leading-relaxed text-[11px]">
-                {commercialCampaign.bodyText}
-              </p>
-              <div className="flex items-center justify-between pt-1">
-                <Button
-                  asChild
-                  size="sm"
-                  onClick={() =>
-                    CommercialRelationshipService.recordCampaignClick(commercialCampaign.id, userId)
-                  }
-                  className="bg-[#C69B4B] text-black hover:bg-[#C69B4B]/90 font-bold font-mono text-[11px] h-8"
-                >
-                  <Link to={commercialCampaign.ctaUrl}>
-                    {commercialCampaign.ctaLabel}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-                <span className="text-[10px] text-[#A8BBC0]/70 font-mono">
-                  Assinatura-base protegida
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-[#0C1317] border border-[#294149]/60 flex flex-col justify-center p-4 text-xs">
-            <div className="space-y-1">
-              <span className="font-mono text-[#01B59A] text-[10px] uppercase">
-                Autonomia & Prática Deliberada
-              </span>
-              <p className="text-white font-bold text-xs">
-                Progressão por Retirada Gradual de Assistência
-              </p>
-              <p className="text-[#A8BBC0] text-[11px] leading-relaxed">
-                Suas resoluções avançam de exercícios guiados até decisões e julgamento técnico
-                autônomo.
-              </p>
-            </div>
-          </Card>
-        )}
+    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+      {/* =========================================================================
+          REGIÃO 1: Saudação Curta
+          "Bom dia! Vamos continuar?" — sem repetir nome da plataforma
+          ========================================================================= */}
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
+          Olá, {firstName}! Vamos continuar?
+        </h1>
+        <p className="text-xs md:text-sm text-muted-foreground">
+          Sua jornada de raciocínio de engenharia hoje.
+        </p>
       </div>
 
-      {/* 2. CABEÇALHO DO ALUNO COM INDICADORES CHAVE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#294149]">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#01B59A] uppercase tracking-wider mb-1">
-            <span className="h-2 w-2 rounded-full bg-[#01B59A] animate-pulse" />
-            <span>Área de Membros • Engenharia Divergente</span>
-            <span className="text-[#A8BBC0]">•</span>
-            <Badge variant="outline" className="border-[#01B59A]/30 text-[#01B59A] text-[10px]">
-              {data?.currentLevel.title || 'Nível 1'}
-            </Badge>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Olá, {user?.name || 'Engenheiro'}!
-          </h1>
-          <p className="text-xs text-[#A8BBC0] mt-0.5 capitalize">{todayStr}</p>
-        </div>
-
-        {/* Gamificação em Destaque Sóbrio (XP + Streak + Nível) */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Streak */}
-          <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#152228] border border-[#294149]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/15 text-orange-400">
-              <Flame className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-[#A8BBC0] font-mono">
-                Sequência Diária
-              </p>
-              <p className="text-sm font-bold text-white font-mono">
-                {data?.streakDays || 1} {data?.streakDays === 1 ? 'dia' : 'dias'}
-              </p>
-            </div>
-          </div>
-
-          {/* XP Ledger Auditável */}
-          <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#152228] border border-[#294149]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#01B59A]/15 text-[#01B59A]">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-[#A8BBC0] font-mono">
-                XP Acumulado
-              </p>
-              <p className="text-sm font-bold text-[#01B59A] font-mono">{data?.totalXp || 0} XP</p>
-            </div>
-          </div>
-
-          {/* Meta Diária com botão para alterar */}
-          <div
-            onClick={() => setGoalDialog(true)}
-            className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#152228] border border-[#294149] hover:border-[#01B59A]/60 cursor-pointer transition-colors"
-            title="Clique para alterar sua meta diária de foco"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#C69B4B]/15 text-[#C69B4B]">
-              <Target className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1">
-                <p className="text-[10px] uppercase tracking-wider text-[#A8BBC0] font-mono">
-                  Meta Hoje
-                </p>
-                <span className="text-[9px] text-[#01B59A] underline">ajustar</span>
+      {/* =========================================================================
+          REGIÃO 2: CONTINUAR APRENDENDO (Elemento central e de maior destaque)
+          Curso, unidade, próxima missão, tempo estimado, progresso resumido, botão "Continuar"
+          ========================================================================= */}
+      {nextMission ? (
+        <Card className="border-2 border-primary/40 bg-card shadow-lg hover:border-primary transition-all">
+          <CardContent className="p-6 md:p-8 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-primary">
+                {nextMission.trackTitle}
+              </span>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1 font-mono">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  {nextMission.estimatedMinutes} min
+                </span>
+                <span className="flex items-center gap-1 font-mono text-primary font-bold">
+                  <Sparkles className="h-3.5 w-3.5" />+{nextMission.xpReward} XP
+                </span>
               </div>
-              <p className="text-sm font-bold text-white font-mono">
-                {data?.activeTodayMinutes || 0} / {data?.targetMinutes || 15} min
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
+                {nextMission.title}
+              </h2>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Próxima missão recomendada para a sua evolução técnica.
               </p>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 3. CARTÃO PRINCIPAL: "CONTINUAR APRENDENDO" — Conectado à próxima atividade real */}
-      {data?.nextActivity && (
-        <Card className="rounded-2xl border-2 border-[#01B59A] bg-gradient-to-br from-[#152228] via-[#0C1317] to-[#0C1317] shadow-xl overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#01B59A]/5 rounded-full blur-3xl pointer-events-none" />
-          <CardContent className="p-6 sm:p-7 relative z-10">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-3 max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#01B59A] text-black">
-                    O que estudar agora
-                  </span>
-                  <span className="text-xs text-[#A8BBC0] font-mono">•</span>
-                  <span className="text-xs font-mono text-[#01B59A]">
-                    {data.nextActivity.trackTitle}
-                  </span>
-                </div>
-
-                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                  {data.nextActivity.title}
-                </h2>
-
-                <p className="text-xs sm:text-sm text-[#A8BBC0] leading-relaxed">
-                  Exercício {data.nextActivity.exerciseNumber} de {data.nextActivity.totalExercises}
-                  : prática deliberada com calculadora técnica, formulação matemática e análise
-                  crítica de tensões no regime elástico.
-                </p>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#A8BBC0] pt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-[#01B59A]" />~
-                    {data.nextActivity.estimatedMinutes} min de foco
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[#01B59A] font-bold">
-                    <Sparkles className="h-4 w-4" />+{data.nextActivity.xpReward} XP auditáveis
-                  </span>
-                </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2 border-t border-border/40">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                <span>Pronto para iniciar</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row lg:flex-col items-stretch gap-3 shrink-0">
+              <div className="flex items-center gap-3">
                 <Button
                   asChild
                   size="lg"
-                  className="bg-[#01B59A] hover:bg-[#00A88F] text-black font-mono font-bold text-sm h-12 px-8 shadow-lg"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-sm px-6 h-11"
                 >
-                  <Link to={`/app/atividade/${data.nextActivity.missionId}`}>
-                    <span>Continuar Aprendendo</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                  <Link to={`/app/atividade/${nextMission.missionId}`}>
+                    Continuar <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>
-
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="border-[#294149] text-[#A8BBC0] hover:text-white text-xs h-9 font-mono"
-                >
-                  <Link to={`/app/trilhas/${data.nextActivity.trackSlug}`}>Ver Mapa da Trilha</Link>
+                <Button asChild variant="outline" size="lg" className="text-xs h-11 border-border">
+                  <Link to={`/app/trilhas/${nextMission.trackSlug}`}>Ver Trilha</Link>
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* 4. BARRA DE NÍVEL E EVOLUÇÃO NO PAINEL */}
-      {data && (
-        <Card className="rounded-xl border border-[#294149] bg-[#0C1317] p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 text-xs font-mono">
-            <div className="flex items-center gap-2">
-              <Award className="h-4 w-4 text-[#01B59A]" />
-              <span className="text-white font-bold">
-                Nível {data.currentLevel.levelNumber}: {data.currentLevel.title}
-              </span>
-            </div>
-            {data.nextLevel && (
-              <span className="text-[#A8BBC0]">
-                Faltam <strong className="text-[#01B59A]">{data.xpToNext} XP</strong> para Nível{' '}
-                {data.nextLevel.levelNumber} ({data.nextLevel.title})
-              </span>
-            )}
-          </div>
-          <Progress value={data.levelProgressPercent} className="h-2 bg-[#152228]" />
-        </Card>
-      )}
-
-      {/* 5. GRADE DE STATUS: HORAS ATIVAS, REVISÕES PENDENTES E MISSÕES */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Horas Ativas */}
-        <Card className="bg-[#152228] border-[#294149]">
-          <CardContent className="p-4 flex items-center justify-between">
+      ) : (
+        <Card className="border border-border bg-card">
+          <CardContent className="p-6 text-center space-y-4">
+            <BookOpen className="h-10 w-10 text-muted-foreground mx-auto" />
             <div>
-              <p className="text-xs text-[#A8BBC0] font-mono">Horas ativas semana</p>
-              <h3 className="text-2xl font-bold font-mono text-white mt-1">
-                {data?.activeWeekHours}h
-              </h3>
-              <p className="text-[10px] text-[#A8BBC0] mt-0.5">Medido por foco real</p>
+              <h3 className="text-base font-bold text-foreground">Nenhuma trilha em andamento</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Escolha uma trilha no catálogo para iniciar seus estudos.
+              </p>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-[#01B59A]/15 text-[#01B59A] flex items-center justify-center">
-              <Clock className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Revisões Espaçadas */}
-        <Card className="bg-[#152228] border-[#294149]">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[#A8BBC0] font-mono">Revisões pendentes</p>
-              <h3 className="text-2xl font-bold font-mono text-[#C69B4B] mt-1">
-                {data?.pendingReviewsCount || 0}
-              </h3>
-              <p className="text-[10px] text-[#A8BBC0] mt-0.5">Ciclo 1 / 3 / 7 / 14 dias</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-[#C69B4B]/15 text-[#C69B4B] flex items-center justify-center">
-              <RotateCcw className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Missões Concluídas */}
-        <Card className="bg-[#152228] border-[#294149]">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[#A8BBC0] font-mono">Missões concluídas</p>
-              <h3 className="text-2xl font-bold font-mono text-white mt-1">
-                {data?.completedMissionsCount || 0}
-              </h3>
-              <p className="text-[10px] text-[#A8BBC0] mt-0.5">Registradas no backend</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Conquistas Desbloqueadas */}
-        <Card className="bg-[#152228] border-[#294149]">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[#A8BBC0] font-mono">Insígnias Técnicas</p>
-              <h3 className="text-2xl font-bold font-mono text-[#01B59A] mt-1">
-                <Link to="/app/conquistas" className="hover:underline">
-                  {data?.unlockedAchievementsCount || 0} / {data?.totalAchievementsCount || 8}
-                </Link>
-              </h3>
-              <p className="text-[10px] text-[#A8BBC0] mt-0.5">Sem rankings públicos</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-[#01B59A]/15 text-[#01B59A] flex items-center justify-center">
-              <Award className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 6. DUAS COLUNAS: COMPETÊNCIAS EM DESENVOLVIMENTO & MEUS CURSOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Competências em Desenvolvimento */}
-        <Card className="bg-[#0C1317] border-[#294149]">
-          <CardHeader className="pb-3 border-b border-[#294149]/60">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-[#01B59A]" />
-                  <span>Competências em Desenvolvimento</span>
-                </CardTitle>
-                <CardDescription className="text-xs text-[#A8BBC0]">
-                  XP mede engajamento; competências medem aprendizagem demonstrada.
-                </CardDescription>
-              </div>
-              <Button asChild variant="ghost" size="sm" className="text-xs text-[#01B59A] h-7">
-                <Link to="/app/progresso">Ver matriz →</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            {data?.developingCompetencies.map((comp, idx) => (
-              <div
-                key={idx}
-                className="space-y-1.5 p-3 rounded-xl bg-[#152228] border border-[#294149]"
-              >
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-white font-medium truncate">{comp.code}</span>
-                  <span className="text-[#01B59A] font-bold">{comp.masteryPercent}% domínio</span>
-                </div>
-                <Progress value={comp.masteryPercent} className="h-2 bg-[#0C1317]" />
-                <p className="text-[10px] text-[#A8BBC0] font-mono">
-                  {comp.answeredCount} questões avaliadas pelo servidor
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Meus Cursos & Entitlements Ativos */}
-        <Card className="bg-[#0C1317] border-[#294149]">
-          <CardHeader className="pb-3 border-b border-[#294149]/60">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-[#01B59A]" />
-                  <span>Meus Cursos e Trilhas</span>
-                </CardTitle>
-                <CardDescription className="text-xs text-[#A8BBC0]">
-                  Trilhas liberadas pelo seu plano de formação contínua.
-                </CardDescription>
-              </div>
-              <Button asChild variant="ghost" size="sm" className="text-xs text-[#01B59A] h-7">
-                <Link to="/app/meus-cursos">Ver todos →</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-4">
-            {data?.myCourses.slice(0, 3).map((course) => (
-              <div
-                key={course.id}
-                className="p-3 rounded-xl bg-[#152228] border border-[#294149] flex items-center justify-between gap-3 text-xs"
-              >
-                <div className="space-y-1 min-w-0">
-                  <p className="font-bold text-white truncate">{course.title}</p>
-                  <p className="text-[10px] font-mono text-[#A8BBC0]">
-                    {course.code} • {course.category}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="border-[#294149] text-xs h-7 text-[#01B59A]"
-                  >
-                    <Link to={`/app/trilhas/${course.slug}`}>Acessar</Link>
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 7. MATERIAIS RECENTES E BIBLIOTECA MULTIMATERIAL */}
-      <Card className="bg-[#0C1317] border-[#294149]">
-        <CardHeader className="pb-3 border-b border-[#294149]/60">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#01B59A]" />
-                <span>Biblioteca Técnica • Acessos Recentes</span>
-              </CardTitle>
-              <CardDescription className="text-xs text-[#A8BBC0]">
-                Apostilas, memoriais de cálculo, arquivos CAD e videoaulas de reforço.
-              </CardDescription>
-            </div>
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="text-xs border-[#294149] text-white h-7"
-            >
-              <Link to="/app/biblioteca">Abrir Biblioteca Completa →</Link>
+            <Button asChild size="sm" className="bg-primary text-primary-foreground font-bold">
+              <Link to="/app/trilhas">Explorar Trilhas</Link>
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Se houver revisão prioritária, exibe chamada discreta */}
+      {pendingReviewsCount > 0 && (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
+          <div className="flex items-center gap-2.5">
+            <RotateCcw className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-foreground">
+              Você tem <strong>{pendingReviewsCount}</strong> exercício(s) para revisão espaçada
+              hoje.
+            </span>
           </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link
-              to="/app/biblioteca"
-              className="p-3 rounded-xl bg-[#152228] border border-[#294149] hover:border-[#01B59A]/60 transition-colors block space-y-1 text-xs"
-            >
-              <Badge variant="outline" className="text-[9px] border-[#01B59A]/40 text-[#01B59A]">
-                PDF
-              </Badge>
-              <p className="font-semibold text-white truncate">
-                Apostila de Resistência dos Materiais
-              </p>
-              <p className="text-[10px] text-[#A8BBC0]">Norma NBR 8800 / Euler-Bernoulli</p>
-            </Link>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="text-xs text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 font-bold"
+          >
+            <Link to="/app/revisar">Revisar agora →</Link>
+          </Button>
+        </div>
+      )}
 
-            <Link
-              to="/app/biblioteca"
-              className="p-3 rounded-xl bg-[#152228] border border-[#294149] hover:border-[#01B59A]/60 transition-colors block space-y-1 text-xs"
-            >
-              <Badge variant="outline" className="text-[9px] border-blue-400/40 text-blue-400">
-                CAD / STEP
-              </Badge>
-              <p className="font-semibold text-white truncate">Viga Perfil I Soldada (W200x35)</p>
-              <p className="text-[10px] text-[#A8BBC0]">Modelo 3D para análise de tensões</p>
-            </Link>
+      {/* =========================================================================
+          REGIÃO 3: MEU PROGRESSO (Resumo compacto em uma única linha / grid equilibrada)
+          XP, sequência de estudo, meta diária, revisões pendentes
+          ========================================================================= */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground font-bold">
+          Meu Progresso
+        </h3>
 
-            <Link
-              to="/app/biblioteca"
-              className="p-3 rounded-xl bg-[#152228] border border-[#294149] hover:border-[#01B59A]/60 transition-colors block space-y-1 text-xs"
-            >
-              <Badge
-                variant="outline"
-                className="text-[9px] border-emerald-400/40 text-emerald-400"
-              >
-                Planilha
-              </Badge>
-              <p className="font-semibold text-white truncate">
-                Cálculo de Flecha e Momento de Inércia
-              </p>
-              <p className="text-[10px] text-[#A8BBC0]">Automatização com tolerância</p>
-            </Link>
-
-            <Link
-              to="/app/biblioteca"
-              className="p-3 rounded-xl bg-[#152228] border border-[#294149] hover:border-[#01B59A]/60 transition-colors block space-y-1 text-xs"
-            >
-              <Badge variant="outline" className="text-[9px] border-[#C69B4B]/40 text-[#C69B4B]">
-                Vídeo
-              </Badge>
-              <p className="font-semibold text-white truncate">Armadilhas de Tensão Nodal</p>
-              <p className="text-[10px] text-[#A8BBC0]">Prof. Fábio Goedel • 12 min</p>
-            </Link>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* XP */}
+          <div className="p-4 rounded-xl bg-card border border-border/60 space-y-1">
+            <span className="text-[10px] uppercase font-mono text-muted-foreground flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-primary" /> XP Total
+            </span>
+            <p className="text-xl font-bold font-mono text-foreground">{totalXp}</p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* DIALOG DE METAS DIÁRIAS (A2: 5, 10, 15 min ou personalizado sem penalização) */}
-      <Dialog open={goalDialog} onOpenChange={setGoalDialog}>
-        <DialogContent className="max-w-md bg-[#0C1317] border-[#294149] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Target className="h-5 w-5 text-[#01B59A]" />
-              Ajustar Meta Diária de Estudo
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 text-xs">
-            <p className="text-[#A8BBC0] leading-relaxed">
-              O tempo é medido por <strong>tempo ativo de foco</strong> na resolução de problemas, e
-              não por aba aberta. Você pode alterar sua meta a qualquer momento sem perder sequência
-              ou XP.
+          {/* Sequência (Streak) */}
+          <div className="p-4 rounded-xl bg-card border border-border/60 space-y-1">
+            <span className="text-[10px] uppercase font-mono text-muted-foreground flex items-center gap-1">
+              <Flame className="h-3 w-3 text-amber-500" /> Dias Seguidos
+            </span>
+            <p className="text-xl font-bold font-mono text-foreground">{streakDays} dias</p>
+          </div>
+
+          {/* Meta Diária */}
+          <div className="p-4 rounded-xl bg-card border border-border/60 space-y-1">
+            <span className="text-[10px] uppercase font-mono text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3 text-primary" /> Meta de Hoje
+            </span>
+            <p className="text-xl font-bold font-mono text-foreground">
+              {activeTodayMinutes}/{targetMinutes} min
             </p>
-
-            <div className="grid grid-cols-3 gap-2.5">
-              {[5, 10, 15, 20, 30, 45].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setSelectedGoalOption(m)}
-                  className={`p-3 rounded-xl border text-center font-mono font-bold transition-all ${
-                    selectedGoalOption === m
-                      ? 'border-[#01B59A] bg-[#01B59A]/15 text-[#01B59A] ring-2 ring-[#01B59A]/30'
-                      : 'border-[#294149] bg-[#152228] text-white hover:border-[#294149]/80'
-                  }`}
-                >
-                  <span className="text-base block">{m}</span>
-                  <span className="text-[10px] text-[#A8BBC0]">min / dia</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="pt-2 flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setGoalDialog(false)}
-                className="border-[#294149] text-[#A8BBC0]"
-              >
-                Cancelar
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleSaveGoal(selectedGoalOption)}
-                className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-bold"
-              >
-                Salvar Meta
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* MODAL DE VÍDEO PEDAGÓGICO DO PROF. FÁBIO GOEDEL (A3) */}
-      <Dialog open={showVideoModal} onOpenChange={setShowVideoModal}>
-        <DialogContent className="max-w-2xl bg-[#0C1317] border-[#294149] text-white p-5">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Play className="h-4 w-4 text-[#01B59A]" />
-              {mentorVideo?.title || 'Mensagem do Prof. Fábio Goedel'}
-            </DialogTitle>
-          </DialogHeader>
+          {/* Revisões */}
+          <div className="p-4 rounded-xl bg-card border border-border/60 space-y-1">
+            <span className="text-[10px] uppercase font-mono text-muted-foreground flex items-center gap-1">
+              <RotateCcw className="h-3 w-3 text-amber-500" /> Revisões
+            </span>
+            <p className="text-xl font-bold font-mono text-foreground">
+              {pendingReviewsCount} pendente{pendingReviewsCount !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+      </div>
 
-          {mentorVideo && (
-            <div className="space-y-4">
-              <UniversalVideoPlayer
-                title={mentorVideo.title}
-                urlOrId={mentorVideo.videoUrlOrId}
-                provider={mentorVideo.provider}
-                thumbnailUrl={mentorVideo.thumbnailUrl}
-                durationSeconds={mentorVideo.durationSeconds}
-              />
+      {/* =========================================================================
+          REGIÃO 4: MINHAS TRILHAS (Trilhas em andamento com acesso rápido)
+          Não mostrar dezenas na primeira tela; botão para consultar todas.
+          ========================================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground font-bold">
+            Minhas Trilhas
+          </h3>
+          <Link
+            to="/app/trilhas"
+            className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+          >
+            Consultar todas <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
 
-              <div className="p-3.5 rounded-xl bg-[#152228] border border-[#294149] text-xs space-y-1">
-                <span className="font-mono text-[#01B59A] font-bold block uppercase tracking-wider text-[10px]">
-                  Orientação do Mentor:
-                </span>
-                <p className="text-[#E6EAED] leading-relaxed">"{mentorVideo.supportMessage}"</p>
-              </div>
+        {tracks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tracks.slice(0, 2).map((t) => (
+              <Card
+                key={t.id}
+                className="bg-card border-border hover:border-primary/50 transition-all group"
+              >
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                      {t.title}
+                    </h4>
+                    <span className="text-xs font-mono font-bold text-primary">
+                      {t.progressPercent}%
+                    </span>
+                  </div>
 
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={() => {
-                    MotivationalService.recordMentorVideoView(
-                      userId,
-                      mentorVideo.id,
-                      mentorVideo.triggerEvent,
-                    )
-                    setShowVideoModal(false)
-                  }}
-                  className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-bold text-xs"
-                >
-                  {mentorVideo.buttonLabel || 'Continuar Estudos'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                  {/* Barra de progresso */}
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${t.progressPercent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {t.totalHours}h estimadas
+                    </span>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-primary hover:text-primary hover:bg-primary/10 h-8 px-2 font-bold"
+                    >
+                      <Link to={`/app/trilhas/${t.slug}`}>
+                        Abrir trilha <ArrowRight className="h-3 w-3 ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="bg-card border-border">
+            <CardContent className="p-6 text-center text-xs text-muted-foreground">
+              Você ainda não iniciou nenhuma trilha.{' '}
+              <Link to="/app/trilhas" className="text-primary underline">
+                Consulte o catálogo
+              </Link>{' '}
+              para começar.
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

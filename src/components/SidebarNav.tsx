@@ -1,200 +1,182 @@
-import React from 'react'
-import { NavLink } from 'react-router-dom'
+import React, { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Compass,
-  GraduationCap,
-  Award,
-  TrendingUp,
-  CreditCard,
-  User as UserIcon,
-  ShieldCheck,
-  Users,
-  BookOpen,
-  FileSpreadsheet,
-  BarChart3,
-  LogOut,
   Sparkles,
-  Boxes,
-  HelpCircle,
-  FolderOpen,
-  FileCheck,
-  UploadCloud,
-  Wand2,
+  BookOpen,
+  TrendingUp,
+  Settings,
+  Shield,
+  Layers,
+  Users,
+  Briefcase,
+  Sliders,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Wordmark } from '@/components/Wordmark'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 
 interface SidebarNavProps {
   onItemClick?: () => void
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
-  const { user, isAdmin, isEditorial, logout } = useAuth()
+  const { user, isAdmin, logout } = useAuth()
+  const location = useLocation()
+  const inAdminRoute = location.pathname.startsWith('/admin')
 
-  const studentLinks = [
+  // Alternância de modo (Área do Aluno vs Administração)
+  const [adminMode, setAdminMode] = useState<boolean>(() => inAdminRoute)
+  const [adminSectionOpen, setAdminSectionOpen] = useState({
+    conteudos: true,
+    gestao: true,
+  })
+
+  // 1. Navegação do ALUNO: Estritamente 5 itens prioritários
+  const learnerPrimaryNav = [
     { to: '/app', label: 'Início', icon: LayoutDashboard, exact: true },
-    { to: '/app/nivelamento', label: 'Nivelamento & Diagnóstico', icon: Compass },
-    { to: '/app/trilhas', label: 'Minhas Trilhas', icon: GraduationCap },
-    { to: '/app/meus-cursos', label: 'Meus Cursos', icon: GraduationCap },
+    { to: '/app/trilhas', label: 'Aprender', icon: Compass },
     { to: '/app/revisar', label: 'Revisar', icon: Sparkles },
     { to: '/app/biblioteca', label: 'Biblioteca', icon: BookOpen },
     { to: '/app/progresso', label: 'Progresso', icon: TrendingUp },
-    { to: '/app/conquistas', label: 'Conquistas & XP', icon: Award },
-    { to: '/app/assinatura', label: 'Assinatura & Acessos', icon: CreditCard },
-    { to: '/app/perfil', label: 'Perfil', icon: UserIcon },
   ]
 
-  // Módulos editoriais (Fase 2) — acessíveis por content_editor, admin, super_admin
-  const editorialLinks = [
-    { to: '/admin/blocos', label: 'Biblioteca de Blocos', icon: Boxes },
-    { to: '/admin/questoes', label: 'Banco de Questões', icon: HelpCircle },
-    { to: '/admin/gerador-ia', label: 'Apoio IA & Schemas', icon: Wand2 },
-    { to: '/admin/midia', label: 'Biblioteca de Mídia', icon: FolderOpen },
-    { to: '/admin/revisao', label: 'Revisão Editorial', icon: FileCheck },
+  // Menus secundários do aluno
+  const learnerSecondaryNav = [
+    { to: '/app/perfil', label: 'Meu Perfil', icon: Settings },
+    { to: '/app/conquistas', label: 'Conquistas & Medalhas', icon: Sparkles },
+    { to: '/app/assinatura', label: 'Minha Assinatura', icon: Briefcase },
   ]
 
-  // Gestão executiva — restrita a admin e super_admin (content_editor NÃO acessa)
-  const adminLinks = [
-    {
-      to: '/admin/trilhas/editor/track-resmat-flexao',
-      label: 'Editor Visual de Trilhas',
-      icon: Sparkles,
-    },
-    { to: '/admin/usuarios', label: 'Usuários & RBAC', icon: ShieldCheck },
-    { to: '/admin/cursos', label: 'Cursos & Trilhas', icon: BookOpen },
-    { to: '/admin/importar', label: 'Importação em Massa', icon: UploadCloud },
-    { to: '/admin/painel', label: 'Painel Admin', icon: BarChart3 },
+  // 2. Navegação ADMINISTRATIVA Agrupada
+  const adminOverview = [{ to: '/admin/painel', label: 'Visão Geral', icon: LayoutDashboard }]
+
+  const adminContentGroup = [
+    { to: '/admin/trilhas/editor/track-resmat-flexao', label: 'Editor de Trilhas', icon: Compass },
+    { to: '/admin/cursos', label: 'Catálogo de Trilhas', icon: BookOpen },
+    { to: '/admin/blocos', label: 'Blocos de Conteúdo', icon: Layers },
+    { to: '/admin/questoes', label: 'Banco de Questões', icon: Layers },
+    { to: '/admin/midia', label: 'Biblioteca de Mídia', icon: BookOpen },
+    { to: '/admin/importar', label: 'Importador JSON/ZIP', icon: Layers },
+  ]
+
+  const adminManagementGroup = [
     { to: '/admin/alunos', label: 'Gestão de Alunos', icon: Users },
-    { to: '/admin/matriculas', label: 'Matrículas & Entitlements', icon: FileSpreadsheet },
-    { to: '/admin/gamificacao', label: 'Gamificação & Mentor', icon: Award },
-    { to: '/admin/adaptativo', label: 'Motor Adaptativo & Regras', icon: Sparkles },
-    { to: '/admin/analytics-pedagogico', label: 'Analytics Pedagógico', icon: BarChart3 },
-    { to: '/admin/campanhas', label: 'Campanhas & Ofertas', icon: BookOpen },
-    { to: '/admin/relatorios', label: 'Relatórios & Roadmap', icon: ShieldCheck },
+    { to: '/admin/matriculas', label: 'Matrículas', icon: Briefcase },
+    { to: '/admin/usuarios', label: 'Controle de Acesso', icon: Shield },
+    { to: '/admin/gamificacao', label: 'Gamificação & Mentor', icon: Sparkles },
+    { to: '/admin/adaptativo', label: 'Motor Adaptativo', icon: Sliders },
+    { to: '/admin/analytics-pedagogico', label: 'Analytics Pedagógico', icon: TrendingUp },
+    { to: '/admin/campanhas', label: 'Campanhas Comerciais', icon: Briefcase },
   ]
 
   return (
-    <div className="flex h-full flex-col justify-between bg-[#0C1317] border-r border-[#294149] text-[#E6EAED] w-full">
-      {/* Topo / Wordmark */}
-      <div className="px-6 py-6 border-b border-[#294149]/60">
+    <div className="flex h-full flex-col justify-between bg-card border-r border-border text-foreground w-full select-none">
+      {/* Topo: Wordmark limpo sem subtítulo técnico redundante */}
+      <div className="px-5 py-5 border-b border-border/60">
         <Wordmark size="md" to="/app" />
-        <p className="mt-2 text-[11px] text-[#A8BBC0] leading-snug">
-          LMS Multimaterial para Engenharia
-        </p>
-      </div>
 
-      {/* Navegação Principal */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
-        {/* Grupo Aluno */}
-        <div>
-          <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8BBC0]/70 flex items-center justify-between">
-            <span>Área do Aluno</span>
-            {user?.streakDays ? (
-              <span className="flex items-center gap-1 text-[#01B59A] font-mono text-[10px] lowercase">
-                <Sparkles className="h-3 w-3" />
-                {user.streakDays}d streak
-              </span>
-            ) : null}
-          </div>
-          <nav className="space-y-1">
-            {studentLinks.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.exact}
-                  onClick={onItemClick}
-                  className={({ isActive }) =>
-                    cn(
-                      'group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150',
-                      isActive
-                        ? 'bg-[#152228] text-white border-l-2 border-[#01B59A] pl-[10px] shadow-sm'
-                        : 'text-[#A8BBC0] hover:text-white hover:bg-[#152228]/50',
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <Icon
-                        className={cn(
-                          'h-4 w-4 shrink-0 transition-colors',
-                          isActive ? 'text-[#01B59A]' : 'text-[#A8BBC0] group-hover:text-white',
-                        )}
-                      />
-                      <span className="truncate">{item.label}</span>
-                    </>
-                  )}
-                </NavLink>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Grupo Editorial / CMS (Fase 2: content_editor, admin, super_admin) */}
-        {isEditorial && (
-          <div className="pt-2 border-t border-[#294149]/40">
-            <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#01B59A] flex items-center justify-between">
-              <span>CMS & Conteúdo</span>
-              <Badge
-                variant="outline"
-                className="text-[9px] border-[#01B59A]/40 text-[#01B59A] px-1 py-0"
-              >
-                Fase 2
-              </Badge>
-            </div>
-            <nav className="space-y-1">
-              {editorialLinks.map((item) => {
-                const Icon = item.icon
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={onItemClick}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150',
-                        isActive
-                          ? 'bg-[#152228] text-white border-l-2 border-[#01B59A] pl-[10px] shadow-sm'
-                          : 'text-[#A8BBC0] hover:text-white hover:bg-[#152228]/50',
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <Icon
-                          className={cn(
-                            'h-4 w-4 shrink-0 transition-colors',
-                            isActive ? 'text-[#01B59A]' : 'text-[#A8BBC0] group-hover:text-white',
-                          )}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </>
-                    )}
-                  </NavLink>
-                )
-              })}
-            </nav>
+        {/* Toggle para Administradores alternarem entre visão de Aluno e Administração */}
+        {isAdmin && (
+          <div className="mt-4 flex rounded-lg bg-muted p-0.5 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setAdminMode(false)}
+              className={cn(
+                'flex-1 py-1 px-2 rounded-md transition-all text-center',
+                !adminMode
+                  ? 'bg-card text-foreground font-semibold shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Área do Aluno
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminMode(true)}
+              className={cn(
+                'flex-1 py-1 px-2 rounded-md transition-all text-center',
+                adminMode
+                  ? 'bg-card text-primary font-bold shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Administração
+            </button>
           </div>
         )}
+      </div>
 
-        {/* Grupo Gestão Administrativa (Apenas admin e super_admin — content_editor bloqueado) */}
-        {isAdmin && (
-          <div className="pt-2 border-t border-[#294149]/40">
-            <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#C69B4B] flex items-center justify-between">
-              <span>Administração</span>
-              <Badge
-                variant="outline"
-                className="text-[9px] border-[#C69B4B]/40 text-[#C69B4B] px-1 py-0"
-              >
-                RBAC Ativo
-              </Badge>
-            </div>
+      {/* Conteúdo de Navegação */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        {!adminMode ? (
+          /* ================= NAVEGAÇÃO DO ALUNO ================= */
+          <div className="space-y-6">
             <nav className="space-y-1">
-              {adminLinks.map((item) => {
+              {learnerPrimaryNav.map((item) => {
+                const Icon = item.icon
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.exact}
+                    onClick={onItemClick}
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-150',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-semibold'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',
+                      )
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                )
+              })}
+            </nav>
+
+            {/* Acessos Secundários */}
+            <div className="pt-4 border-t border-border/40">
+              <span className="px-3 text-[10px] uppercase tracking-wider font-mono text-muted-foreground/70 block mb-1">
+                Minha Conta
+              </span>
+              <nav className="space-y-0.5">
+                {learnerSecondaryNav.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onItemClick}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-lg transition-colors',
+                          isActive
+                            ? 'text-primary font-semibold bg-primary/5'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/40',
+                        )
+                      }
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  )
+                })}
+              </nav>
+            </div>
+          </div>
+        ) : (
+          /* ================= NAVEGAÇÃO ADMINISTRATIVA ================= */
+          <div className="space-y-5 text-xs">
+            {/* Visão Geral */}
+            <nav className="space-y-0.5">
+              {adminOverview.map((item) => {
                 const Icon = item.icon
                 return (
                   <NavLink
@@ -203,38 +185,111 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
                     onClick={onItemClick}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150',
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition-colors',
                         isActive
-                          ? 'bg-[#152228] text-white border-l-2 border-[#C69B4B] pl-[10px] shadow-sm'
-                          : 'text-[#A8BBC0] hover:text-white hover:bg-[#152228]/50',
+                          ? 'bg-primary/15 text-primary font-bold'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',
                       )
                     }
                   >
-                    {({ isActive }) => (
-                      <>
-                        <Icon
-                          className={cn(
-                            'h-4 w-4 shrink-0 transition-colors',
-                            isActive ? 'text-[#C69B4B]' : 'text-[#A8BBC0] group-hover:text-white',
-                          )}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </>
-                    )}
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
                   </NavLink>
                 )
               })}
             </nav>
+
+            {/* Grupo Conteúdos */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setAdminSectionOpen((p) => ({ ...p, conteudos: !p.conteudos }))}
+                className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-wider"
+              >
+                <span>Conteúdos & Trilhas</span>
+                {adminSectionOpen.conteudos ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+              {adminSectionOpen.conteudos && (
+                <nav className="space-y-0.5 mt-1 pl-1">
+                  {adminContentGroup.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={onItemClick}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-colors',
+                            isActive
+                              ? 'text-primary font-semibold bg-primary/10'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40',
+                          )
+                        }
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+              )}
+            </div>
+
+            {/* Grupo Gestão */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setAdminSectionOpen((p) => ({ ...p, gestao: !p.gestao }))}
+                className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-wider"
+              >
+                <span>Gestão & Comercial</span>
+                {adminSectionOpen.gestao ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+              {adminSectionOpen.gestao && (
+                <nav className="space-y-0.5 mt-1 pl-1">
+                  {adminManagementGroup.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={onItemClick}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-colors',
+                            isActive
+                              ? 'text-primary font-semibold bg-primary/10'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40',
+                          )
+                        }
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+              )}
+            </div>
           </div>
         )}
       </div>
 
       {/* Cartão de Usuário Inferior */}
-      <div className="p-4 border-t border-[#294149] bg-[#0C1317]">
+      <div className="p-3 border-t border-border bg-card">
         {user ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-[#152228] border border-[#01B59A]/40 flex items-center justify-center font-bold text-xs text-[#01B59A] shrink-0">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="h-8 w-8 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center font-bold text-xs text-primary shrink-0">
                 {user.name
                   .split(' ')
                   .map((p) => p[0])
@@ -243,22 +298,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
                   .toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white truncate">{user.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span
-                    className={cn(
-                      'text-[9px] uppercase tracking-wider px-1.5 py-0.2 rounded font-mono',
-                      isAdmin
-                        ? 'bg-[#C69B4B]/20 text-[#C69B4B] border border-[#C69B4B]/30'
-                        : 'bg-[#01B59A]/20 text-[#01B59A] border border-[#01B59A]/30',
-                    )}
-                  >
-                    {user.role}
-                  </span>
-                  <span className="text-[10px] text-[#A8BBC0] truncate font-mono">
-                    {user.totalXp} XP
-                  </span>
-                </div>
+                <p className="text-xs font-semibold text-foreground truncate">{user.name}</p>
+                <p className="text-[10px] text-muted-foreground font-mono">{user.totalXp} XP</p>
               </div>
             </div>
 
@@ -267,17 +308,13 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
                 logout()
                 if (onItemClick) onItemClick()
               }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-[#A8BBC0] hover:text-[#C86F63] hover:bg-[#152228] rounded border border-[#294149] transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg border border-border transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span>Sair da conta</span>
+              <span>Sair</span>
             </button>
           </div>
-        ) : (
-          <div className="text-xs text-center text-[#A8BBC0]">
-            <p>Nenhuma sessão ativa</p>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

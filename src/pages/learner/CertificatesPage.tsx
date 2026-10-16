@@ -38,7 +38,7 @@ export default function CertificatesPage() {
     toast({
       title: 'Emissão de PDF (Demonstração)',
       description:
-        'O layout oficial do certificado vetorial com QR Code criptográfico será gerado pelo Edge Function do Supabase na Fase 2.',
+        'O layout oficial do certificado de conclusão com autenticação digital será emitido após a conclusão de todos os requisitos da trilha.',
     })
   }
 

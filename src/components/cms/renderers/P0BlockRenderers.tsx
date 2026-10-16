@@ -89,11 +89,14 @@ export const SingleChoiceBlockRenderer: React.FC<BaseBlockRendererProps> = ({
                 {opt.label || opt.id.slice(0, 1).toUpperCase()}
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm">{opt.text}</p>
+                <div className="text-sm">
+                  <SanitizedMarkdownViewer content={opt.text} />
+                </div>
                 {submitted && opt.rationale && (
-                  <p className="text-xs text-[#A8BBC0] italic pt-1 border-t border-white/10">
-                    Justificativa: {opt.rationale}
-                  </p>
+                  <div className="text-xs text-[#A8BBC0] italic pt-1 border-t border-white/10">
+                    Justificativa:{' '}
+                    <SanitizedMarkdownViewer content={opt.rationale} className="inline" />
+                  </div>
                 )}
               </div>
               {submitted && opt.id === correctOptionId && (
@@ -193,9 +196,13 @@ export const MultipleChoiceBlockRenderer: React.FC<BaseBlockRendererProps> = ({
               <Checkbox checked={isSelected} className="mt-0.5" />
               <div className="flex-1 space-y-1">
                 <span className="font-mono text-xs text-[#01B59A] mr-2 font-bold">{opt.label}</span>
-                <span className="text-sm text-[#E6EAED]">{opt.text}</span>
+                <div className="text-sm text-[#E6EAED] inline-block">
+                  <SanitizedMarkdownViewer content={opt.text} />
+                </div>
                 {submitted && opt.rationale && (
-                  <p className="text-xs text-[#A8BBC0] italic pt-1">{opt.rationale}</p>
+                  <div className="text-xs text-[#A8BBC0] italic pt-1">
+                    <SanitizedMarkdownViewer content={opt.rationale} />
+                  </div>
                 )}
               </div>
             </div>
