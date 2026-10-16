@@ -35,14 +35,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
   const { user, isAdmin, isEditorial, logout } = useAuth()
 
   const studentLinks = [
-    { to: '/app', label: 'Painel Pessoal', icon: LayoutDashboard, exact: true },
-    { to: '/app/trilhas', label: 'Trilhas de Engenharia', icon: Compass },
+    { to: '/app', label: 'Início', icon: LayoutDashboard, exact: true },
+    { to: '/app/trilhas', label: 'Minhas Trilhas', icon: Compass },
     { to: '/app/meus-cursos', label: 'Meus Cursos', icon: GraduationCap },
-    { to: '/app/biblioteca', label: 'Biblioteca & Materiais', icon: BookOpen },
-    { to: '/app/progresso', label: 'Competências & Horas', icon: TrendingUp },
+    { to: '/app/revisar', label: 'Revisar', icon: Sparkles },
+    { to: '/app/biblioteca', label: 'Biblioteca', icon: BookOpen },
+    { to: '/app/progresso', label: 'Progresso', icon: TrendingUp },
     { to: '/app/conquistas', label: 'Conquistas & XP', icon: Award },
     { to: '/app/assinatura', label: 'Assinatura & Acessos', icon: CreditCard },
-    { to: '/app/perfil', label: 'Meu Perfil', icon: UserIcon },
+    { to: '/app/perfil', label: 'Perfil', icon: UserIcon },
   ]
 
   // Módulos editoriais (Fase 2) — acessíveis por content_editor, admin, super_admin

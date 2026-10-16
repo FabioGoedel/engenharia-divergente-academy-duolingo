@@ -47,6 +47,10 @@ import {
   Subphase45SuiteReport,
 } from '@/lib/subphase45SecurityAuditRunner'
 import { runPhase5RealBackendTests, Phase5SuiteReport } from '@/lib/phase5RealTestRunner'
+import {
+  runPhase5VerificationSuite,
+  Phase5VerificationReport,
+} from '@/lib/phase5VerificationRunner'
 
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -87,6 +91,7 @@ export const ActivityPlayerPage: React.FC = () => {
     subphase44Report?: Subphase44SuiteReport
     subphase45Report?: Subphase45SuiteReport
     phase5Report?: Phase5SuiteReport
+    phase5VerificationReport?: Phase5VerificationReport
   }>({ running: false })
 
   const handleRunDiagnostics = async () => {
@@ -99,30 +104,43 @@ export const ActivityPlayerPage: React.FC = () => {
       const s44Report = await runSubphase44RealBackendTests()
       const s45Report = await runSubphase45SecurityAudit()
       const p5Report = await runPhase5RealBackendTests()
+      const p5VerificationReport = await runPhase5VerificationSuite()
 
       const p3Passed = p3Results.every((r) => r.passed)
       const s43Passed = s43Report.failedCount === 0
       const s44Passed = s44Report.failedCount === 0
       const s45Passed = s45Report.failedCount === 0
       const p5Passed = p5Report.failedTests === 0
+      const p5vPassed = p5VerificationReport.failedCount === 0
+
       const totalPassed =
         outcome.passedCount +
         p3Results.filter((r) => r.passed).length +
         s43Report.passedCount +
         s44Report.passedCount +
         s45Report.passedCount +
-        p5Report.passedTests
+        p5Report.passedTests +
+        p5VerificationReport.approvedCount
+
       const totalFailed =
         outcome.failedCount +
         p3Results.filter((r) => !r.passed).length +
         s43Report.failedCount +
         s44Report.failedCount +
         s45Report.failedCount +
-        p5Report.failedTests
+        p5Report.failedTests +
+        p5VerificationReport.failedCount
 
       setTestSummary({
         running: false,
-        allPassed: outcome.allPassed && p3Passed && s43Passed && s44Passed && s45Passed && p5Passed,
+        allPassed:
+          outcome.allPassed &&
+          p3Passed &&
+          s43Passed &&
+          s44Passed &&
+          s45Passed &&
+          p5Passed &&
+          p5vPassed,
         passedCount: totalPassed,
         failedCount: totalFailed,
         results: outcome.results,
@@ -131,6 +149,7 @@ export const ActivityPlayerPage: React.FC = () => {
         subphase44Report: s44Report,
         subphase45Report: s45Report,
         phase5Report: p5Report,
+        phase5VerificationReport: p5VerificationReport,
       })
     } catch (diagErr) {
       console.error('Erro na execução dos testes:', diagErr)
@@ -935,6 +954,48 @@ export const ActivityPlayerPage: React.FC = () => {
                             ) : (
                               <span className="text-[#C86F63] font-bold shrink-0">FAIL</span>
                             )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {testSummary.phase5VerificationReport && (
+                      <>
+                        <p className="text-[10px] text-[#01B59A] uppercase tracking-wider font-bold pt-3">
+                          Fase 5 — Pacote A: Homologação Supabase Real (16 Itens Oficiais):
+                        </p>
+                        {testSummary.phase5VerificationReport.items.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-start justify-between gap-2 p-2 rounded bg-[#152228] border border-[#294149]/60"
+                          >
+                            <div className="space-y-0.5">
+                              <span className="text-[11px] text-white block font-medium">
+                                {r.itemNumber}. {r.name}
+                              </span>
+                              <span className="text-[10px] text-[#A8BBC0] block leading-relaxed">
+                                {r.details}
+                              </span>
+                              {r.accountUsed && (
+                                <span className="text-[9px] text-[#01B59A] block font-mono">
+                                  Conta: {r.accountUsed}
+                                </span>
+                              )}
+                              <span className="text-[9px] text-[#55707A] block font-mono">
+                                Duração: {r.durationMs}ms
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded ${
+                                r.status === 'APROVADO'
+                                  ? 'bg-[#01B59A]/20 text-[#01B59A]'
+                                  : r.status === 'NÃO EXECUTÁVEL'
+                                    ? 'bg-[#C69B4B]/20 text-[#C69B4B]'
+                                    : 'bg-[#C86F63]/20 text-[#C86F63]'
+                              }`}
+                            >
+                              {r.status}
+                            </span>
                           </div>
                         ))}
                       </>

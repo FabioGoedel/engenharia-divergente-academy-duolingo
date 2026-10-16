@@ -98,19 +98,50 @@ export const MotivationalService = {
       return null
     }
 
-    // 3. Checa impressões já exibidas para este usuário
+    // 3. Checa impressões já exibidas para este usuário com timestamp para controle de frequência
     const { data: impressions } = await (supabase as any)
       .from('student_message_impressions')
-      .select('message_id')
+      .select('message_id, shown_at')
       .eq('user_id', userId)
       .eq('trigger_event', trigger)
+      .order('shown_at', { ascending: false })
 
     const impressionCounts = new Map<string, number>()
     for (const imp of (impressions as any[]) || []) {
       impressionCounts.set(imp.message_id, (impressionCounts.get(imp.message_id) || 0) + 1)
     }
 
-    // Seleciona a primeira que ainda não atingiu o limite
+    // Controle de frequência: se a última impressão exibida para este mesmo gatilho
+    // foi a mesma mensagem há menos de 5 minutos (sequência curta), tenta rotacionar para outra mensagem
+    const lastImpressionMsgId =
+      impressions && impressions.length > 0 ? impressions[0].message_id : null
+    const lastShownAt =
+      impressions && impressions.length > 0 ? new Date(impressions[0].shown_at).getTime() : 0
+    const now = Date.now()
+    const isRecent = now - lastShownAt < 5 * 60 * 1000 // 5 minutos
+
+    // Primeiro tenta mensagens não repetidas recentemente
+    for (const msg of messages) {
+      const shownCount = impressionCounts.get(msg.id) || 0
+      if (shownCount < msg.max_impressions_per_user) {
+        if (isRecent && msg.id === lastImpressionMsgId && messages.length > 1) {
+          // Se é a mesma que acabou de ser mostrada e há outras opções, pula para evitar repetição em sequência curta
+          continue
+        }
+        return {
+          id: msg.id,
+          triggerEvent: msg.trigger_event,
+          title: msg.title,
+          messageText: msg.message_text,
+          tone: msg.tone,
+          isActive: msg.is_active,
+          priority: msg.priority,
+          maxImpressionsPerUser: msg.max_impressions_per_user,
+        }
+      }
+    }
+
+    // Se só sobrou a recente mas ainda abaixo do teto, permite
     for (const msg of messages) {
       const shownCount = impressionCounts.get(msg.id) || 0
       if (shownCount < msg.max_impressions_per_user) {

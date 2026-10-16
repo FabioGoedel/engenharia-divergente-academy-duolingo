@@ -44,6 +44,8 @@ interface RealDashboardData {
   targetMinutes: number
   completedMissionsCount: number
   pendingReviewsCount: number
+  unlockedAchievementsCount: number
+  totalAchievementsCount: number
   currentLevel: GamificationLevel
   nextLevel?: GamificationLevel
   levelProgressPercent: number
@@ -85,7 +87,9 @@ export default function LearnerDashboard() {
   const userId = user?.id || 'demo-student-user'
 
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<RealDashboardData | null>(null)
+  const [hasEnrollment, setHasEnrollment] = useState<boolean>(true)
   const [contextualMsg, setContextualMsg] = useState<ContextualMessageConfig | null>(null)
   const [mentorVideo, setMentorVideo] = useState<MentorVideoConfig | null>(null)
   const [showVideoModal, setShowVideoModal] = useState(false)
@@ -95,6 +99,7 @@ export default function LearnerDashboard() {
   useEffect(() => {
     async function loadDashboard() {
       setLoading(true)
+      setError(null)
       try {
         // Registra telemetria de abertura
         MotivationalService.recordTelemetry(userId, 'dashboard_opened')
@@ -108,11 +113,12 @@ export default function LearnerDashboard() {
         let streakDays = user?.streakDays || 1
 
         if (isReal) {
-          const { data: pRow } = await (supabase as any)
+          const { data: pRow, error: pErr } = await (supabase as any)
             .from('profiles')
             .select('total_xp, streak_days')
             .eq('id', userId)
             .maybeSingle()
+          if (pErr) throw pErr
           if (pRow) {
             totalXp = pRow.total_xp || 0
             streakDays = pRow.streak_days || 1
@@ -121,20 +127,74 @@ export default function LearnerDashboard() {
 
         const levelInfo = GamificationService.calculateLevelFromXp(totalXp, levels)
 
-        // 3. Busca cursos com matrícula / entitlement
-        const { data: productsData } = await (supabase as any)
-          .from('products')
-          .select('*')
-          .eq('is_published', true)
+        // 3. Verifica matrículas reais e produtos autorizados
+        let myCoursesList: Array<{
+          id: string
+          title: string
+          code: string
+          category: string
+          progressPercent: number
+          slug: string
+        }> = []
 
-        const myCoursesList = (productsData || []).map((p: any) => ({
-          id: p.id,
-          title: p.title,
-          code: p.code,
-          category: p.category || 'Mecânica Computacional',
-          progressPercent: p.code === 'PROD-BASE-01' ? 40 : p.code === 'PROD-MEF-01' ? 15 : 0,
-          slug: p.slug || 'track-resmat-flexao',
-        }))
+        if (isReal) {
+          const { data: enrollments, error: enrErr } = await (supabase as any)
+            .from('enrollments')
+            .select('id, course_id, status, courses(id, title, slug, code)')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+
+          if (enrErr) throw enrErr
+
+          if (enrollments && enrollments.length > 0) {
+            setHasEnrollment(true)
+            myCoursesList = enrollments.map((e: any) => ({
+              id: e.courses?.id || e.id,
+              title: e.courses?.title || 'Curso Matriculado',
+              code: e.courses?.code || 'ENR-01',
+              category: 'Engenharia Estrutural',
+              progressPercent: 20,
+              slug: e.courses?.slug || 'track-resmat-flexao',
+            }))
+          } else {
+            // Verifica também entitlements
+            const { data: entitlements } = await (supabase as any)
+              .from('entitlements')
+              .select('id, product_id, is_active, products(id, title, code, slug)')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+
+            if (entitlements && entitlements.length > 0) {
+              setHasEnrollment(true)
+              myCoursesList = entitlements.map((ent: any) => ({
+                id: ent.products?.id || ent.id,
+                title: ent.products?.title || 'Trilha Autorizada',
+                code: ent.products?.code || 'PROD',
+                category: 'Mecânica Computacional',
+                progressPercent: 10,
+                slug: ent.products?.slug || 'track-resmat-flexao',
+              }))
+            } else {
+              setHasEnrollment(false)
+            }
+          }
+        } else {
+          // Modo demo
+          setHasEnrollment(true)
+          const { data: productsData } = await (supabase as any)
+            .from('products')
+            .select('*')
+            .eq('is_published', true)
+
+          myCoursesList = (productsData || []).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            code: p.code,
+            category: p.category || 'Mecânica Computacional',
+            progressPercent: p.code === 'PROD-BASE-01' ? 40 : p.code === 'PROD-MEF-01' ? 15 : 0,
+            slug: p.slug || 'track-resmat-flexao',
+          }))
+        }
 
         // 4. Busca competências em desenvolvimento
         let developingCompetencies: Array<{
@@ -157,9 +217,7 @@ export default function LearnerDashboard() {
               answeredCount: c.total_questions_answered || 0,
             }))
           }
-        }
-
-        if (!developingCompetencies.length) {
+        } else {
           developingCompetencies = [
             {
               code: 'COMP-RESMAT-01 (Equilíbrio e Linha Neutra)',
@@ -184,25 +242,68 @@ export default function LearnerDashboard() {
         }))
 
         // 6. Próxima Atividade Recomendada Real (trilha canônica)
-        const nextActivity = {
-          missionId: 'mis-resmat-flexao-01',
-          title: 'Flexão de Vigas: Tensões Normais & Linha Neutra',
-          trackTitle: 'Trilha Canônica: Fundamentos de Flexão e MEF',
-          trackSlug: 'track-resmat-flexao',
-          estimatedMinutes: 25,
-          xpReward: 125,
-          exerciseNumber: 2,
-          totalExercises: 5,
+        const nextActivity =
+          hasEnrollment || !isReal
+            ? {
+                missionId: 'mis-resmat-flexao-01',
+                title: 'Flexão de Vigas: Tensões Normais & Linha Neutra',
+                trackTitle: 'Trilha Canônica: Fundamentos de Flexão e MEF',
+                trackSlug: 'track-resmat-flexao',
+                estimatedMinutes: 25,
+                xpReward: 125,
+                exerciseNumber: 2,
+                totalExercises: 5,
+              }
+            : null
+
+        // 7. Horas ativas e contadores reais
+        let completedMissions = 0
+        let pendingReviews = 0
+        let activeWeekHours = 0
+
+        if (isReal) {
+          const { count: doneCount } = await (supabase as any)
+            .from('activity_attempts')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('status', 'completed')
+          completedMissions = doneCount || 0
+
+          const { count: revCount } = await (supabase as any)
+            .from('review_schedule')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('is_pending', true)
+          pendingReviews = revCount || 0
+
+          activeWeekHours = Number(((dailyGoal.activeTodaySeconds || 0) / 3600).toFixed(1))
+        } else {
+          completedMissions = 1
+          pendingReviews = 2
+          activeWeekHours = 2.8
+        }
+
+        // 8. Busca conquistas desbloqueadas reais
+        let unlockedCount = 0
+        let totalAch = 8
+        try {
+          const achs = await GamificationService.listAchievementsForStudent(userId)
+          unlockedCount = achs.filter((a) => a.earned).length
+          totalAch = achs.length || 8
+        } catch {
+          unlockedCount = 0
         }
 
         setData({
           totalXp,
           streakDays,
           activeTodayMinutes: Math.round(dailyGoal.activeTodaySeconds / 60),
-          activeWeekHours: 2.8,
+          activeWeekHours,
           targetMinutes: dailyGoal.targetMinutes,
-          completedMissionsCount: 1,
-          pendingReviewsCount: 2,
+          completedMissionsCount: completedMissions,
+          pendingReviewsCount: pendingReviews,
+          unlockedAchievementsCount: unlockedCount,
+          totalAchievementsCount: totalAch,
           currentLevel: levelInfo.currentLevel,
           nextLevel: levelInfo.nextLevel,
           levelProgressPercent: levelInfo.progressPercent,
@@ -226,8 +327,9 @@ export default function LearnerDashboard() {
         if (vid) {
           setMentorVideo(vid)
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Erro ao montar dashboard do aluno:', err)
+        setError(err?.message || 'Falha ao sincronizar dados do painel do aluno.')
       } finally {
         setLoading(false)
       }
@@ -257,6 +359,59 @@ export default function LearnerDashboard() {
         <p className="text-xs font-mono text-[#A8BBC0] uppercase tracking-wider">
           Carregando dados reais do aluno...
         </p>
+      </div>
+    )
+  }
+
+  // Estado de Erro (Item 2)
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
+        <div className="p-5 rounded-2xl border border-[#C86F63]/50 bg-[#C86F63]/10 text-white space-y-2">
+          <AlertCircle className="h-8 w-8 text-[#C86F63] mx-auto" />
+          <h2 className="text-base font-bold">Erro ao carregar o Painel de Aprendizagem</h2>
+          <p className="text-xs text-[#A8BBC0]">{error}</p>
+        </div>
+        <Button
+          onClick={() => window.location.reload()}
+          variant="outline"
+          className="border-[#294149] text-white font-mono text-xs"
+        >
+          Tentar Novamente
+        </Button>
+      </div>
+    )
+  }
+
+  // Estado Sem Matrícula Ativa (Item 2)
+  if (isReal && !hasEnrollment) {
+    return (
+      <div className="max-w-3xl mx-auto py-12 space-y-6">
+        <div className="p-8 rounded-2xl border border-[#294149] bg-[#0C1317] text-center space-y-4 shadow-xl">
+          <Compass className="h-12 w-12 text-[#01B59A] mx-auto" />
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-white">Nenhuma matrícula ativa localizada</h2>
+            <p className="text-xs text-[#A8BBC0] max-w-lg mx-auto">
+              Sua conta ainda não possui matrículas ativas em cursos ou trilhas de engenharia.
+              Escolha uma trilha no catálogo para iniciar seu percurso formativo.
+            </p>
+          </div>
+          <div className="pt-2 flex justify-center gap-3">
+            <Button
+              asChild
+              className="bg-[#01B59A] text-black font-mono font-bold text-xs h-10 px-6"
+            >
+              <Link to="/app/trilhas">Explorar Catálogo de Trilhas</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-[#294149] text-[#A8BBC0] text-xs h-10 font-mono"
+            >
+              <Link to="/app/biblioteca">Acessar Materiais Abertos</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -511,7 +666,11 @@ export default function LearnerDashboard() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-[#A8BBC0] font-mono">Insígnias Técnicas</p>
-              <h3 className="text-2xl font-bold font-mono text-[#01B59A] mt-1">1 / 8</h3>
+              <h3 className="text-2xl font-bold font-mono text-[#01B59A] mt-1">
+                <Link to="/app/conquistas" className="hover:underline">
+                  {data?.unlockedAchievementsCount || 0} / {data?.totalAchievementsCount || 8}
+                </Link>
+              </h3>
               <p className="text-[10px] text-[#A8BBC0] mt-0.5">Sem rankings públicos</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-[#01B59A]/15 text-[#01B59A] flex items-center justify-center">

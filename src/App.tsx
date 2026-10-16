@@ -107,6 +107,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/app/revisar"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <ActivityPlayerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/app/progresso"
                   element={
                     <ProtectedRoute requiredRole="student">

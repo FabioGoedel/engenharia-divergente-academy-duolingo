@@ -56,6 +56,17 @@ export default function ProgressPage() {
     xpToNext: number
   } | null>(null)
 
+  // Grupo 2: Competências Reais
+  const [realCompetencies, setRealCompetencies] = useState<
+    Array<{
+      name: string
+      code: string
+      category: string
+      scorePercent: number
+      level: string
+    }>
+  >([])
+
   // Grupo 3: Autonomia Técnica (calculada a partir de dados reais)
   const [autonomyStats, setAutonomyStats] = useState<{
     autonomousPercent: number
@@ -63,17 +74,27 @@ export default function ProgressPage() {
     hintsUsedTotal: number
     independentSolved: number
   }>({
-    autonomousPercent: 82,
-    totalAnswered: 17,
-    hintsUsedTotal: 2,
-    independentSolved: 14,
+    autonomousPercent: 0,
+    totalAnswered: 0,
+    hintsUsedTotal: 0,
+    independentSolved: 0,
   })
 
   useEffect(() => {
     async function loadData() {
       // 1. Níveis e XP
       const levels = await GamificationService.listLevels()
-      const totalXp = user?.totalXp || 0
+      let totalXp = user?.totalXp || 0
+
+      if (isReal && user?.id) {
+        const { data: pRow } = await (supabase as any)
+          .from('profiles')
+          .select('total_xp')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (pRow) totalXp = pRow.total_xp || 0
+      }
+
       const calc = GamificationService.calculateLevelFromXp(totalXp, levels)
       setLevelInfo(calc)
 
@@ -82,6 +103,25 @@ export default function ProgressPage() {
         LearningPersistenceService.getStudentLearningMetrics(user.id)
           .then(setRealMetrics)
           .catch(console.warn)
+
+        // 2.1 Competências reais do Supabase
+        const { data: compRows } = await (supabase as any)
+          .from('student_competency_progress')
+          .select('*')
+          .eq('user_id', user.id)
+
+        if (compRows && compRows.length > 0) {
+          setRealCompetencies(
+            compRows.map((c: any) => ({
+              name: c.competency_code,
+              code: c.competency_code,
+              category: 'Mecânica Computacional',
+              scorePercent: Math.round(Number(c.mastery_score_percent) || 0),
+              level:
+                (Number(c.mastery_score_percent) || 0) >= 80 ? 'Avançado' : 'Em Desenvolvimento',
+            })),
+          )
+        }
 
         // 3. Consulta respostas para calcular autonomia real
         const { data: answers } = await (supabase as any)
@@ -107,6 +147,13 @@ export default function ProgressPage() {
             independentSolved: independent,
           })
         }
+      } else if (!isReal) {
+        setAutonomyStats({
+          autonomousPercent: 82,
+          totalAnswered: 17,
+          hintsUsedTotal: 2,
+          independentSolved: 14,
+        })
       }
     }
 
@@ -256,7 +303,12 @@ export default function ProgressPage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {COMPETENCIES.map((comp, idx) => (
+              {(isReal && realCompetencies.length > 0
+                ? realCompetencies
+                : isReal
+                  ? []
+                  : COMPETENCIES
+              ).map((comp, idx) => (
                 <div
                   key={idx}
                   className="p-3.5 rounded-xl border border-[#294149] bg-[#152228] space-y-2 text-xs"
@@ -272,6 +324,12 @@ export default function ProgressPage() {
                   </div>
                 </div>
               ))}
+              {isReal && realCompetencies.length === 0 && (
+                <div className="col-span-2 py-8 text-center text-xs text-[#A8BBC0] border border-dashed border-[#294149] rounded-xl">
+                  Nenhuma competência avaliada ainda. Complete atividades da trilha para registrar
+                  seu domínio técnico.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
