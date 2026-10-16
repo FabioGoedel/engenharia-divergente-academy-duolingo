@@ -35,6 +35,10 @@ import AdminCoursesPage from '@/pages/admin/AdminCoursesPage'
 import AdminEnrollmentsPage from '@/pages/admin/AdminEnrollmentsPage'
 import AdminGamificationPage from '@/pages/admin/AdminGamificationPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
+import AdminAdaptiveEnginePage from '@/pages/admin/AdminAdaptiveEnginePage'
+import AdminPedagogicalAnalyticsPage from '@/pages/admin/AdminPedagogicalAnalyticsPage'
+import AdminCommercialCampaignsPage from '@/pages/admin/AdminCommercialCampaignsPage'
+import DiagnosticAssessmentPage from '@/pages/learner/DiagnosticAssessmentPage'
 
 // Páginas CMS e Multimídia (Fase 2)
 import { AdminBlocksPage } from '@/pages/admin/AdminBlocksPage'
@@ -71,6 +75,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="student">
                       <LearnerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app/nivelamento"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <DiagnosticAssessmentPage />
                     </ProtectedRoute>
                   }
                 />
@@ -259,6 +271,30 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminGamificationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/adaptativo"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminAdaptiveEnginePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/analytics-pedagogico"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPedagogicalAnalyticsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/campanhas"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminCommercialCampaignsPage />
                     </ProtectedRoute>
                   }
                 />

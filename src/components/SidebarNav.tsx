@@ -36,7 +36,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
 
   const studentLinks = [
     { to: '/app', label: 'Início', icon: LayoutDashboard, exact: true },
-    { to: '/app/trilhas', label: 'Minhas Trilhas', icon: Compass },
+    { to: '/app/nivelamento', label: 'Nivelamento & Diagnóstico', icon: Compass },
+    { to: '/app/trilhas', label: 'Minhas Trilhas', icon: GraduationCap },
     { to: '/app/meus-cursos', label: 'Meus Cursos', icon: GraduationCap },
     { to: '/app/revisar', label: 'Revisar', icon: Sparkles },
     { to: '/app/biblioteca', label: 'Biblioteca', icon: BookOpen },
@@ -69,6 +70,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onItemClick }) => {
     { to: '/admin/alunos', label: 'Gestão de Alunos', icon: Users },
     { to: '/admin/matriculas', label: 'Matrículas & Entitlements', icon: FileSpreadsheet },
     { to: '/admin/gamificacao', label: 'Gamificação & Mentor', icon: Award },
+    { to: '/admin/adaptativo', label: 'Motor Adaptativo & Regras', icon: Sparkles },
+    { to: '/admin/analytics-pedagogico', label: 'Analytics Pedagógico', icon: BarChart3 },
+    { to: '/admin/campanhas', label: 'Campanhas & Ofertas', icon: BookOpen },
     { to: '/admin/relatorios', label: 'Relatórios & Roadmap', icon: ShieldCheck },
   ]
 

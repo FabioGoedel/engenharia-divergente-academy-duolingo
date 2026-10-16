@@ -31,6 +31,8 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SanitizedMarkdownViewer, MathFormula } from '@/components/cms/SanitizedMarkdownViewer'
 import { EngineeringCalculator } from '@/components/calculator/EngineeringCalculator'
+import { AiTutorChatWidget } from '@/components/tutor/AiTutorChatWidget'
+import { Bot } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { runAcademyEngineeringTests, TestResult } from '@/lib/testRunner'
 import { runPhase3AutomatedTests, Phase3TestReport } from '@/lib/phase3TestRunner'
@@ -47,6 +49,10 @@ import {
   Subphase45SuiteReport,
 } from '@/lib/subphase45SecurityAuditRunner'
 import { runPhase5RealBackendTests, Phase5SuiteReport } from '@/lib/phase5RealTestRunner'
+import {
+  runPhase5PackageBRealTests,
+  Phase5PackageBReport,
+} from '@/lib/phase5PackageBRealTestRunner'
 import {
   runPhase5VerificationSuite,
   Phase5VerificationReport,
@@ -80,6 +86,7 @@ export const ActivityPlayerPage: React.FC = () => {
 
   // Painel de Testes Automatizados (Critério 10)
   const [showTestsModal, setShowTestsModal] = useState(false)
+  const [showAiTutor, setShowAiTutor] = useState(false)
   const [testSummary, setTestSummary] = useState<{
     running: boolean
     allPassed?: boolean
@@ -92,6 +99,7 @@ export const ActivityPlayerPage: React.FC = () => {
     subphase45Report?: Subphase45SuiteReport
     phase5Report?: Phase5SuiteReport
     phase5VerificationReport?: Phase5VerificationReport
+    phase5PackageBReport?: Phase5PackageBReport
   }>({ running: false })
 
   const handleRunDiagnostics = async () => {
@@ -106,12 +114,15 @@ export const ActivityPlayerPage: React.FC = () => {
       const p5Report = await runPhase5RealBackendTests()
       const p5VerificationReport = await runPhase5VerificationSuite()
 
+      const p5bReport = await runPhase5PackageBRealTests()
+
       const p3Passed = p3Results.every((r) => r.passed)
       const s43Passed = s43Report.failedCount === 0
       const s44Passed = s44Report.failedCount === 0
       const s45Passed = s45Report.failedCount === 0
       const p5Passed = p5Report.failedTests === 0
       const p5vPassed = p5VerificationReport.failedCount === 0
+      const p5bPassed = p5bReport.failedCount === 0
 
       const totalPassed =
         outcome.passedCount +
@@ -120,7 +131,8 @@ export const ActivityPlayerPage: React.FC = () => {
         s44Report.passedCount +
         s45Report.passedCount +
         p5Report.passedTests +
-        p5VerificationReport.approvedCount
+        p5VerificationReport.approvedCount +
+        p5bReport.passedCount
 
       const totalFailed =
         outcome.failedCount +
@@ -129,7 +141,8 @@ export const ActivityPlayerPage: React.FC = () => {
         s44Report.failedCount +
         s45Report.failedCount +
         p5Report.failedTests +
-        p5VerificationReport.failedCount
+        p5VerificationReport.failedCount +
+        p5bReport.failedCount
 
       setTestSummary({
         running: false,
@@ -140,7 +153,8 @@ export const ActivityPlayerPage: React.FC = () => {
           s44Passed &&
           s45Passed &&
           p5Passed &&
-          p5vPassed,
+          p5vPassed &&
+          p5bPassed,
         passedCount: totalPassed,
         failedCount: totalFailed,
         results: outcome.results,
@@ -150,6 +164,7 @@ export const ActivityPlayerPage: React.FC = () => {
         subphase45Report: s45Report,
         phase5Report: p5Report,
         phase5VerificationReport: p5VerificationReport,
+        phase5PackageBReport: p5bReport,
       })
     } catch (diagErr) {
       console.error('Erro na execução dos testes:', diagErr)
@@ -869,6 +884,29 @@ export const ActivityPlayerPage: React.FC = () => {
         targetUnit={currentExercise.numericUnit}
       />
 
+      {/* Botão Flutuante do Tutor de IA */}
+      <div className="fixed bottom-6 right-6 z-40">
+        {!showAiTutor ? (
+          <Button
+            onClick={() => setShowAiTutor(true)}
+            className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-bold font-mono text-xs rounded-full h-12 px-5 shadow-2xl flex items-center gap-2"
+          >
+            <Bot className="h-4 w-4" />
+            <span>Tutor de IA</span>
+          </Button>
+        ) : (
+          <div className="w-[360px] sm:w-[420px] shadow-2xl">
+            <AiTutorChatWidget
+              exerciseId={currentExercise.id}
+              competencyCode="COMP-RESMAT-01"
+              assistanceStage="stage_3_retrieval_with_hints"
+              currentMode="study_mode"
+              onClose={() => setShowAiTutor(false)}
+            />
+          </div>
+        )}
+      </div>
+
       {/* Modal / Gaveta de Diagnósticos de Teste (Critério 10) */}
       {showTestsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -954,6 +992,42 @@ export const ActivityPlayerPage: React.FC = () => {
                             ) : (
                               <span className="text-[#C86F63] font-bold shrink-0">FAIL</span>
                             )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {testSummary.phase5PackageBReport && (
+                      <>
+                        <p className="text-[10px] text-[#01B59A] uppercase tracking-wider font-bold pt-3">
+                          Fase 5 — Pacote B: Aprendizagem Adaptativa, IA, Analytics & Comercial
+                          (Backend Real):
+                        </p>
+                        {testSummary.phase5PackageBReport.results.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-start justify-between gap-2 p-2 rounded bg-[#152228] border border-[#294149]/60"
+                          >
+                            <div className="space-y-0.5">
+                              <span className="text-[11px] text-white block font-medium">
+                                {r.id}: {r.title}
+                              </span>
+                              <span className="text-[10px] text-[#A8BBC0] block leading-relaxed">
+                                {r.details}
+                              </span>
+                              <span className="text-[9px] text-[#55707A] block font-mono">
+                                Duração: {r.durationMs}ms
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded ${
+                                r.passed
+                                  ? 'bg-[#01B59A]/20 text-[#01B59A]'
+                                  : 'bg-[#C86F63]/20 text-[#C86F63]'
+                              }`}
+                            >
+                              {r.passed ? 'PASS' : 'FAIL'}
+                            </span>
                           </div>
                         ))}
                       </>

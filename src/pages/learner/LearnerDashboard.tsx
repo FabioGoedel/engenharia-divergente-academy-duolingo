@@ -29,6 +29,15 @@ import {
   ContextualMessageConfig,
   MentorVideoConfig,
 } from '@/services/motivationalService'
+import {
+  AdaptiveProgressionService,
+  AdaptiveRecommendation,
+} from '@/services/adaptiveProgressionService'
+import {
+  CommercialRelationshipService,
+  CommercialCampaign,
+} from '@/services/commercialRelationshipService'
+import { Megaphone } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -95,6 +104,8 @@ export default function LearnerDashboard() {
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [goalDialog, setGoalDialog] = useState(false)
   const [selectedGoalOption, setSelectedGoalOption] = useState<number>(15)
+  const [adaptiveRec, setAdaptiveRec] = useState<AdaptiveRecommendation | null>(null)
+  const [commercialCampaign, setCommercialCampaign] = useState<CommercialCampaign | null>(null)
 
   useEffect(() => {
     async function loadDashboard() {
@@ -327,6 +338,31 @@ export default function LearnerDashboard() {
         if (vid) {
           setMentorVideo(vid)
         }
+
+        // 9. Fase 5 Pacote B: Motor Adaptativo & Recomendação Determinística
+        try {
+          const rec = await AdaptiveProgressionService.computeAdaptiveRecommendation(
+            userId,
+            'track-resmat-flexao',
+          )
+          setAdaptiveRec(rec)
+        } catch (e) {
+          console.warn('Erro ao carregar recomendação adaptativa:', e)
+        }
+
+        // 10. Fase 5 Pacote B: Oferta Comercial Discreta Contextual (respeitando entitlements)
+        try {
+          const camp = await CommercialRelationshipService.getEligibleCampaignForStudent(
+            userId,
+            'dashboard_contextual',
+          )
+          if (camp) {
+            setCommercialCampaign(camp)
+            await CommercialRelationshipService.recordCampaignImpression(camp.id, userId)
+          }
+        } catch (e) {
+          console.warn('Erro ao carregar campanha comercial:', e)
+        }
       } catch (err: any) {
         console.warn('Erro ao montar dashboard do aluno:', err)
         setError(err?.message || 'Falha ao sincronizar dados do painel do aluno.')
@@ -454,6 +490,111 @@ export default function LearnerDashboard() {
           )}
         </div>
       )}
+
+      {/* 1.1 FASE 5 PACOTE B: RECOMENDAÇÃO ADAPTATIVA & CAMPANHA COMERCIAL DISCRETA */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Recomendação Determinística do Motor Adaptativo */}
+        <Card className="bg-[#152228] border border-[#01B59A]/30">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono text-[#01B59A] uppercase tracking-wider flex items-center gap-1.5">
+                <Compass className="h-3.5 w-3.5" />
+                Motor Adaptativo • Próximo Ponto
+              </span>
+              <Badge
+                variant="outline"
+                className="border-[#01B59A]/40 text-[#01B59A] text-[9px] font-mono"
+              >
+                {adaptiveRec?.recommendedStage
+                  ? adaptiveRec.recommendedStage.replace('stage_', 'Estágio ')
+                  : 'Personalizado'}
+              </Badge>
+            </div>
+            <CardTitle className="text-sm font-bold text-white mt-1">
+              {adaptiveRec?.title || 'Avaliação Diagnóstica de Nivelamento'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-3 text-xs">
+            <p className="text-[#A8BBC0] leading-relaxed text-[11px]">
+              {adaptiveRec?.explanation ||
+                'Realize o diagnóstico de nivelamento para receber exercícios com retirada gradual de assistência técnica.'}
+            </p>
+            <div className="flex items-center justify-between pt-1">
+              <Button
+                asChild
+                size="sm"
+                className="bg-[#01B59A] text-black hover:bg-[#01B59A]/90 font-bold font-mono text-[11px] h-8"
+              >
+                <Link to="/app/nivelamento">
+                  Fazer Nivelamento / Ver Ponto de Partida
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campanha Comercial Contextual Discreta */}
+        {commercialCampaign ? (
+          <Card className="bg-[#152228] border border-[#C69B4B]/30">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-[#C69B4B] uppercase tracking-wider flex items-center gap-1.5">
+                  <Megaphone className="h-3.5 w-3.5" />
+                  Especialização Técnica • Engenharia Divergente
+                </span>
+                <Badge
+                  variant="outline"
+                  className="border-[#C69B4B]/40 text-[#C69B4B] text-[9px] font-mono"
+                >
+                  {commercialCampaign.targetProductCode}
+                </Badge>
+              </div>
+              <CardTitle className="text-sm font-bold text-white mt-1">
+                {commercialCampaign.headline}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-1 space-y-3 text-xs">
+              <p className="text-[#A8BBC0] leading-relaxed text-[11px]">
+                {commercialCampaign.bodyText}
+              </p>
+              <div className="flex items-center justify-between pt-1">
+                <Button
+                  asChild
+                  size="sm"
+                  onClick={() =>
+                    CommercialRelationshipService.recordCampaignClick(commercialCampaign.id, userId)
+                  }
+                  className="bg-[#C69B4B] text-black hover:bg-[#C69B4B]/90 font-bold font-mono text-[11px] h-8"
+                >
+                  <Link to={commercialCampaign.ctaUrl}>
+                    {commercialCampaign.ctaLabel}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+                <span className="text-[10px] text-[#A8BBC0]/70 font-mono">
+                  Assinatura-base protegida
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-[#0C1317] border border-[#294149]/60 flex flex-col justify-center p-4 text-xs">
+            <div className="space-y-1">
+              <span className="font-mono text-[#01B59A] text-[10px] uppercase">
+                Autonomia & Prática Deliberada
+              </span>
+              <p className="text-white font-bold text-xs">
+                Progressão por Retirada Gradual de Assistência
+              </p>
+              <p className="text-[#A8BBC0] text-[11px] leading-relaxed">
+                Suas resoluções avançam de exercícios guiados até decisões e julgamento técnico
+                autônomo.
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* 2. CABEÇALHO DO ALUNO COM INDICADORES CHAVE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#294149]">
