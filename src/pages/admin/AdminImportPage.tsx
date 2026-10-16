@@ -220,12 +220,12 @@ export const AdminImportPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-white">Importação em Massa</h1>
             <Badge variant="outline" className="text-[10px] border-[#01B59A]/40 text-[#01B59A]">
-              ediv-content-package v1.0.0
+              ediv-content-package v1.0.0 (Supabase Real)
             </Badge>
           </div>
           <p className="text-xs text-[#A8BBC0] mt-1">
-            Importe centenas de questões e blocos gerados externamente (ChatGPT, Claude, scripts)
-            com validação Zod, idempotência e proteção estrita de gabaritos.
+            Importe centenas de questões e blocos gerados externamente com persistência no banco
+            Supabase, validação Zod, dry-run, idempotência e proteção estrita de gabaritos privados.
           </p>
         </div>
 
@@ -538,7 +538,7 @@ export const AdminImportPage: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold text-white">Importação Concluída com Sucesso!</h2>
               <p className="text-xs text-[#A8BBC0]">
-                Lote {importResult.batchId} persistido em modo demonstração (
+                Lote {importResult.batchId} persistido com segurança no catálogo (
                 {importResult.timestamp})
               </p>
             </div>

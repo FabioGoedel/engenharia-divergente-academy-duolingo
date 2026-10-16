@@ -9,6 +9,241 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_attempts: {
+        Row: {
+          active_time_seconds: number
+          activity_version: number
+          completed_at: string | null
+          current_exercise_index: number
+          hints_used_total: number
+          id: string
+          metadata: Json
+          mission_id: string
+          started_at: string
+          status: Database['public']['Enums']['attempt_status']
+          total_xp_awarded: number
+          user_id: string
+        }
+        Insert: {
+          active_time_seconds?: number
+          activity_version?: number
+          completed_at?: string | null
+          current_exercise_index?: number
+          hints_used_total?: number
+          id?: string
+          metadata?: Json
+          mission_id: string
+          started_at?: string
+          status?: Database['public']['Enums']['attempt_status']
+          total_xp_awarded?: number
+          user_id: string
+        }
+        Update: {
+          active_time_seconds?: number
+          activity_version?: number
+          completed_at?: string | null
+          current_exercise_index?: number
+          hints_used_total?: number
+          id?: string
+          metadata?: Json
+          mission_id?: string
+          started_at?: string
+          status?: Database['public']['Enums']['attempt_status']
+          total_xp_awarded?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'activity_attempts_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      activity_difficulty_feedback: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          exercise_id: string
+          guessed: boolean
+          id: string
+          perceived_difficulty: number
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          exercise_id: string
+          guessed?: boolean
+          id?: string
+          perceived_difficulty: number
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          exercise_id?: string
+          guessed?: boolean
+          id?: string
+          perceived_difficulty?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'activity_difficulty_feedback_attempt_id_fkey'
+            columns: ['attempt_id']
+            isOneToOne: false
+            referencedRelation: 'activity_attempts'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'activity_difficulty_feedback_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      attempt_answers: {
+        Row: {
+          active_seconds: number
+          answered_at: string
+          assistance_degree: string
+          attempt_id: string
+          competency_code: string | null
+          exercise_id: string
+          exercise_version: number
+          formula_was_hidden: boolean
+          grade_result: Json
+          guessed: boolean
+          hints_used_count: number
+          id: string
+          is_correct: boolean
+          perceived_difficulty: number | null
+          question_id: string | null
+          score_percent: number
+          student_answer: Json
+          user_id: string
+        }
+        Insert: {
+          active_seconds?: number
+          answered_at?: string
+          assistance_degree?: string
+          attempt_id: string
+          competency_code?: string | null
+          exercise_id: string
+          exercise_version?: number
+          formula_was_hidden?: boolean
+          grade_result?: Json
+          guessed?: boolean
+          hints_used_count?: number
+          id?: string
+          is_correct: boolean
+          perceived_difficulty?: number | null
+          question_id?: string | null
+          score_percent?: number
+          student_answer: Json
+          user_id: string
+        }
+        Update: {
+          active_seconds?: number
+          answered_at?: string
+          assistance_degree?: string
+          attempt_id?: string
+          competency_code?: string | null
+          exercise_id?: string
+          exercise_version?: number
+          formula_was_hidden?: boolean
+          grade_result?: Json
+          guessed?: boolean
+          hints_used_count?: number
+          id?: string
+          is_correct?: boolean
+          perceived_difficulty?: number | null
+          question_id?: string | null
+          score_percent?: number
+          student_answer?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'attempt_answers_attempt_id_fkey'
+            columns: ['attempt_id']
+            isOneToOne: false
+            referencedRelation: 'activity_attempts'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'attempt_answers_question_id_fkey'
+            columns: ['question_id']
+            isOneToOne: false
+            referencedRelation: 'question_bank'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'attempt_answers_question_id_fkey'
+            columns: ['question_id']
+            isOneToOne: false
+            referencedRelation: 'view_student_question_bank'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'attempt_answers_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      attempt_events: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          event_type: string
+          exercise_id: string | null
+          id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          event_type: string
+          exercise_id?: string | null
+          id?: string
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          event_type?: string
+          exercise_id?: string | null
+          id?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'attempt_events_attempt_id_fkey'
+            columns: ['attempt_id']
+            isOneToOne: false
+            referencedRelation: 'activity_attempts'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'attempt_events_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: Database['public']['Enums']['audit_action_type']
@@ -255,6 +490,13 @@ export type Database = {
             columns: ['referenced_question_id']
             isOneToOne: false
             referencedRelation: 'question_bank'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'content_blocks_referenced_question_id_fkey'
+            columns: ['referenced_question_id']
+            isOneToOne: false
+            referencedRelation: 'view_student_question_bank'
             referencedColumns: ['id']
           },
         ]
@@ -824,6 +1066,63 @@ export type Database = {
             referencedRelation: 'question_bank'
             referencedColumns: ['id']
           },
+          {
+            foreignKeyName: 'question_versions_question_id_fkey'
+            columns: ['question_id']
+            isOneToOne: false
+            referencedRelation: 'view_student_question_bank'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      review_schedule: {
+        Row: {
+          competency_code: string | null
+          created_at: string
+          exercise_id: string
+          id: string
+          interval_days: number
+          is_pending: boolean
+          mission_id: string
+          reviewed_at: string | null
+          scheduled_for: string
+          state: Database['public']['Enums']['review_interval_state']
+          user_id: string
+        }
+        Insert: {
+          competency_code?: string | null
+          created_at?: string
+          exercise_id: string
+          id?: string
+          interval_days?: number
+          is_pending?: boolean
+          mission_id: string
+          reviewed_at?: string | null
+          scheduled_for?: string
+          state?: Database['public']['Enums']['review_interval_state']
+          user_id: string
+        }
+        Update: {
+          competency_code?: string | null
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          interval_days?: number
+          is_pending?: boolean
+          mission_id?: string
+          reviewed_at?: string | null
+          scheduled_for?: string
+          state?: Database['public']['Enums']['review_interval_state']
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'review_schedule_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
         ]
       }
       role_permissions: {
@@ -846,6 +1145,113 @@ export type Database = {
           role?: Database['public']['Enums']['user_role_type']
         }
         Relationships: []
+      }
+      student_activity_progress: {
+        Row: {
+          best_score_percent: number
+          completed_attempts_count: number
+          first_completed_at: string | null
+          id: string
+          is_completed: boolean
+          last_activity_at: string
+          last_attempt_id: string | null
+          mission_id: string
+          total_active_seconds: number
+          total_attempts_count: number
+          total_xp_earned: number
+          user_id: string
+        }
+        Insert: {
+          best_score_percent?: number
+          completed_attempts_count?: number
+          first_completed_at?: string | null
+          id?: string
+          is_completed?: boolean
+          last_activity_at?: string
+          last_attempt_id?: string | null
+          mission_id: string
+          total_active_seconds?: number
+          total_attempts_count?: number
+          total_xp_earned?: number
+          user_id: string
+        }
+        Update: {
+          best_score_percent?: number
+          completed_attempts_count?: number
+          first_completed_at?: string | null
+          id?: string
+          is_completed?: boolean
+          last_activity_at?: string
+          last_attempt_id?: string | null
+          mission_id?: string
+          total_active_seconds?: number
+          total_attempts_count?: number
+          total_xp_earned?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'student_activity_progress_last_attempt_id_fkey'
+            columns: ['last_attempt_id']
+            isOneToOne: false
+            referencedRelation: 'activity_attempts'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'student_activity_progress_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      student_competency_progress: {
+        Row: {
+          autonomous_correct_count: number
+          competency_code: string
+          correct_questions_count: number
+          guessed_count: number
+          hints_used_total: number
+          id: string
+          last_assessed_at: string
+          mastery_score_percent: number
+          total_questions_answered: number
+          user_id: string
+        }
+        Insert: {
+          autonomous_correct_count?: number
+          competency_code: string
+          correct_questions_count?: number
+          guessed_count?: number
+          hints_used_total?: number
+          id?: string
+          last_assessed_at?: string
+          mastery_score_percent?: number
+          total_questions_answered?: number
+          user_id: string
+        }
+        Update: {
+          autonomous_correct_count?: number
+          competency_code?: string
+          correct_questions_count?: number
+          guessed_count?: number
+          hints_used_total?: number
+          id?: string
+          last_assessed_at?: string
+          mastery_score_percent?: number
+          total_questions_answered?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'student_competency_progress_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -934,9 +1340,107 @@ export type Database = {
           },
         ]
       }
+      xp_ledger: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          policy_code: string
+          reason: string
+          source_attempt_id: string | null
+          user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          policy_code?: string
+          reason: string
+          source_attempt_id?: string | null
+          user_id: string
+          xp_amount: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          policy_code?: string
+          reason?: string
+          source_attempt_id?: string | null
+          user_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'xp_ledger_source_attempt_id_fkey'
+            columns: ['source_attempt_id']
+            isOneToOne: false
+            referencedRelation: 'activity_attempts'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'xp_ledger_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      view_student_question_bank: {
+        Row: {
+          competency_code: string | null
+          estimated_seconds: number | null
+          external_id: string | null
+          hint: string | null
+          id: string | null
+          numeric_unit: string | null
+          options: Json | null
+          prompt_markdown: string | null
+          question_type: Database['public']['Enums']['question_type'] | null
+          subject_area: string | null
+          tags: string[] | null
+          title: string | null
+          version: number | null
+          xp_reward: number | null
+        }
+        Insert: {
+          competency_code?: string | null
+          estimated_seconds?: number | null
+          external_id?: string | null
+          hint?: string | null
+          id?: string | null
+          numeric_unit?: string | null
+          options?: Json | null
+          prompt_markdown?: string | null
+          question_type?: Database['public']['Enums']['question_type'] | null
+          subject_area?: string | null
+          tags?: string[] | null
+          title?: string | null
+          version?: number | null
+          xp_reward?: number | null
+        }
+        Update: {
+          competency_code?: string | null
+          estimated_seconds?: number | null
+          external_id?: string | null
+          hint?: string | null
+          id?: string | null
+          numeric_unit?: string | null
+          options?: Json | null
+          prompt_markdown?: string | null
+          question_type?: Database['public']['Enums']['question_type'] | null
+          subject_area?: string | null
+          tags?: string[] | null
+          title?: string | null
+          version?: number | null
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_assign_role: {
@@ -960,8 +1464,31 @@ export type Database = {
       }
       is_admin: { Args: { user_uid: string }; Returns: boolean }
       is_super_admin: { Args: { user_uid: string }; Returns: boolean }
+      record_exercise_evaluation: {
+        Args: {
+          p_active_seconds: number
+          p_assistance_degree: string
+          p_attempt_id: string
+          p_competency_code: string
+          p_exercise_id: string
+          p_exercise_version: number
+          p_formula_was_hidden: boolean
+          p_grade_result: Json
+          p_guessed: boolean
+          p_hints_used_count: number
+          p_is_correct: boolean
+          p_is_mission_completed: boolean
+          p_perceived_difficulty: number
+          p_score_percent: number
+          p_student_answer: Json
+          p_xp_reason: string
+          p_xp_to_award: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
+      attempt_status: 'in_progress' | 'completed' | 'abandoned'
       audit_action_type:
         | 'role_assigned'
         | 'role_revoked'
@@ -982,6 +1509,12 @@ export type Database = {
         | 'true_false'
         | 'numeric_response'
         | 'ordered_steps'
+      review_interval_state:
+        | 'step_1_day'
+        | 'step_3_days'
+        | 'step_7_days'
+        | 'step_14_days'
+        | 'mastered'
       subscription_status: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete'
       user_role_type: 'student' | 'content_editor' | 'admin' | 'super_admin'
     }
@@ -1109,6 +1642,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      attempt_status: ['in_progress', 'completed', 'abandoned'],
       audit_action_type: [
         'role_assigned',
         'role_revoked',
@@ -1130,6 +1664,13 @@ export const Constants = {
         'true_false',
         'numeric_response',
         'ordered_steps',
+      ],
+      review_interval_state: [
+        'step_1_day',
+        'step_3_days',
+        'step_7_days',
+        'step_14_days',
+        'mastered',
       ],
       subscription_status: ['active', 'past_due', 'canceled', 'trialing', 'incomplete'],
       user_role_type: ['student', 'content_editor', 'admin', 'super_admin'],

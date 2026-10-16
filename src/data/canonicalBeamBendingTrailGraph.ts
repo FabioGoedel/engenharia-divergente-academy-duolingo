@@ -25,6 +25,7 @@ export const BEAM_BENDING_CANONICAL_GRAPH: TrailGraph = {
   description:
     'Trilha interativa completa e determinística modelando o fluxo de aprendizagem de flexão pura e simples com ramificações adaptativas.',
   version: 1,
+  revision: 1,
   status: 'published',
   publishedAt: '2025-01-15T10:00:00.000Z',
   publishedBy: 'Prof. Carlos Eduardo (Super Admin)',

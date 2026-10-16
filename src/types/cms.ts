@@ -112,7 +112,8 @@ export interface QuestionBankItem {
     perceivedDifficulty: 'muito_facil' | 'facil' | 'adequada' | 'dificil' | 'muito_dificil'
     isPendingTelemetry: boolean
   }
-  isDemo: true
+  revision?: number
+  isDemo?: boolean
 }
 
 // Questão sanitizada para o payload do Aluno (SEM privateKey e SEM distractorRationale exposto prematuramente)
@@ -225,7 +226,8 @@ export interface ContentBlock {
     courseSlug: string
     moduleTitle: string
   }>
-  isDemo: true
+  revision?: number
+  isDemo?: boolean
 }
 
 // Snapshot de versão imutável

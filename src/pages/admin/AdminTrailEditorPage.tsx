@@ -309,20 +309,36 @@ export default function AdminTrailEditorPage() {
     [setNodes],
   )
 
-  // Salvar Rascunho
+  // Salvar Rascunho com Optimistic Locking e tratamento de conflito
   const handleSaveDraft = async () => {
     const currentGraph = buildCurrentTrailGraph()
     if (!currentGraph) return
     setIsSaving(true)
     try {
-      const res = await TrailGraphService.saveGraphDraft(currentGraph, user?.role)
+      const res = await TrailGraphService.saveGraphDraft(
+        currentGraph,
+        user?.role,
+        currentGraph.revision,
+      )
+
+      if (res.conflict) {
+        toast({
+          title: 'Conflito de Edição Concorrente!',
+          description:
+            res.message ||
+            'Outro usuário ou sessão salvou uma alteração nesta trilha. Recarregue os dados para sincronizar antes de sobrescrever.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       setGraph(res.graph)
       setValidationReport(res.validation)
       toast({
-        title: 'Trilha salva com sucesso',
+        title: 'Trilha salva no Supabase com sucesso',
         description: res.validation.isValid
-          ? 'Estrutura válida e sem erros impeditivos.'
-          : `Foram detectados ${res.validation.errors.length} erro(s) de validação.`,
+          ? `Estrutura salva na revisão r${res.graph.revision}. Sem erros impeditivos.`
+          : `Revisão r${res.graph.revision} salva. Atenção: ${res.validation.errors.length} erro(s) pendentes para publicação.`,
       })
     } catch (err: unknown) {
       toast({

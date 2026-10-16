@@ -10,6 +10,7 @@ interface SubmissionPayload {
     numericValue?: string | number
     choiceId?: string
     notes?: string
+    stepOrder?: string[]
   }
   hintsUsedCount?: number
   perceivedDifficulty?: 1 | 2 | 3 | 4 | 5
@@ -42,6 +43,30 @@ function parseBrazilianNumericInput(val: unknown): number | null {
   return Number.isFinite(num) ? num : null
 }
 
+/**
+ * Validação estrutural de JWT (Header.Payload.Signature)
+ */
+function validateJwtStructure(jwt: string): { valid: boolean; error?: string; payload?: any } {
+  const parts = jwt.split('.')
+  if (parts.length !== 3) {
+    return { valid: false, error: 'Token JWT malformado (deve conter 3 segmentos).' }
+  }
+
+  try {
+    const rawPayload = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
+    const payload = JSON.parse(rawPayload)
+    const now = Math.floor(Date.now() / 1000)
+
+    if (payload.exp && payload.exp < now) {
+      return { valid: false, error: 'Token JWT expirado.' }
+    }
+
+    return { valid: true, payload }
+  } catch (err: any) {
+    return { valid: false, error: 'Decodificação do payload JWT falhou.' }
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -53,14 +78,31 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Autorização ausente. Cabeçalho Authorization obrigatório.' }),
+        JSON.stringify({ error: 'Autorização ausente. Cabeçalho Bearer token é obrigatório.' }),
         { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
       )
     }
 
-    // Cliente com contexto do usuário autenticado para validação de identidade
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Token de autenticação vazio.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      })
+    }
+
+    // 1. Validação estrita de formato e expiração antes de repassar
+    const jwtCheck = validateJwtStructure(token)
+    if (!jwtCheck.valid) {
+      return new Response(
+        JSON.stringify({ error: jwtCheck.error || 'Token JWT inválido ou expirado.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+      )
+    }
+
+    // 2. Cliente com contexto do usuário autenticado no Supabase Auth oficial
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
@@ -69,17 +111,29 @@ Deno.serve(async (req: Request) => {
       data: { user },
       error: userError,
     } = await userClient.auth.getUser()
+
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Usuário não autenticado no Supabase.' }), {
-        status: 401,
+      return new Response(
+        JSON.stringify({
+          error: 'Assinatura ou autenticação do token rejeitada pelo Supabase Auth.',
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+      )
+    }
+
+    // 3. Cliente admin com SERVICE_ROLE para acessar gabarito privado de forma segura
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey)
+
+    let body: SubmissionPayload
+    try {
+      body = await req.json()
+    } catch {
+      return new Response(JSON.stringify({ error: 'Payload JSON inválido.' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       })
     }
 
-    // Cliente admin com SERVICE_ROLE para acessar gabarito privado de forma segura
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey)
-
-    const body: SubmissionPayload = await req.json()
     const {
       attemptId,
       exerciseId,
@@ -100,7 +154,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 1. Busca a tentativa e verifica a propriedade
+    // 4. Busca a tentativa e verifica a propriedade contra user.id REAL do JWT verificado
     const { data: attempt, error: attemptErr } = await adminClient
       .from('activity_attempts')
       .select('*')
@@ -114,6 +168,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    // NUNCA confiar em user_id do cliente: compara exclusivamente com user.id autenticado
     if (attempt.user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: 'Acesso negado: a tentativa pertence a outro aluno.' }),
@@ -121,9 +176,10 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 2. Busca a questão no banco de questões para ler chave privada de correção
-    // Tenta primeiro por external_id correspondente ou id direto
+    // 5. Busca a questão no banco de questões ou em snapshots de versão
     let questionRow: any = null
+
+    // Procura por external_id ou id direto
     const { data: qByExt } = await adminClient
       .from('question_bank')
       .select('*')
@@ -160,16 +216,33 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const privateKey = (questionRow.private_key_json as any) || {}
+    // 6. Respeita versão imutável vinculada: se question_versions tiver snapshot da versão exata usada
+    let privateKey = (questionRow.private_key_json as any) || {}
+    let questionVersion = questionRow.version || 1
+
+    if (attempt.activity_version && attempt.activity_version !== questionRow.version) {
+      const { data: qv } = await adminClient
+        .from('question_versions')
+        .select('*')
+        .eq('question_id', questionRow.id)
+        .eq('version_number', attempt.activity_version)
+        .maybeSingle()
+
+      if (qv && qv.snapshot && qv.snapshot.private_key_json) {
+        privateKey = qv.snapshot.private_key_json
+        questionVersion = qv.version_number
+      }
+    }
+
     let isCorrect = false
     let scorePercent = 0
     let feedbackRationale: string | undefined = undefined
     let numericDetails: any = undefined
 
-    // 3. Regras canônicas de correção server-side por tipo
+    // 7. Regras canônicas de correção server-side por tipo
     const qType = questionRow.question_type
 
-    if (qType === 'single_choice' || qType === 'multiple_choice') {
+    if (qType === 'single_choice' || qType === 'multiple_choice' || qType === 'true_false') {
       const selectedId = studentAnswer.selectedOptionIds?.[0] || studentAnswer.choiceId
       const expectedId = privateKey.correctOptionIds?.[0]
       isCorrect = Boolean(selectedId && selectedId === expectedId)
@@ -204,9 +277,16 @@ Deno.serve(async (req: Request) => {
           unit: questionRow.numeric_unit || privateKey.numericUnit,
         }
       }
+    } else if (qType === 'ordered_steps') {
+      const userOrder = studentAnswer.stepOrder || []
+      const expectedOrder = privateKey.correctStepOrder || []
+      isCorrect =
+        userOrder.length === expectedOrder.length &&
+        userOrder.every((id: string, idx: number) => id === expectedOrder[idx])
+      scorePercent = isCorrect ? 100 : 0
     }
 
-    // 4. Cálculo determinístico de XP
+    // 8. Cálculo determinístico de XP
     const baseXp = questionRow.xp_reward || 20
     const hintPenalty = hintsUsedCount * 5
     const xpToAward = isCorrect ? Math.max(5, baseXp - hintPenalty) : 0
@@ -220,10 +300,10 @@ Deno.serve(async (req: Request) => {
       feedbackRationale,
       numericDetails,
       correctOptionIds: privateKey.correctOptionIds,
+      evaluatedAtVersion: questionVersion,
     }
 
-    // 5. Verifica se esta submissão conclui a missão
-    // Busca todas as respostas da tentativa
+    // 9. Verifica se conclui a missão
     const { data: previousAnswers } = await adminClient
       .from('attempt_answers')
       .select('exercise_id, is_correct')
@@ -235,10 +315,9 @@ Deno.serve(async (req: Request) => {
     })
     if (isCorrect) completedExSet.add(exerciseId)
 
-    // Na missão MDZAM são 5 exercícios canônicos
     const isMissionCompleted = completedExSet.size >= 5
 
-    // 6. Chamada à função atômica PostgreSQL SECURITY DEFINER
+    // 10. Persistência atômica via RPC PostgreSQL
     const assistanceDegree =
       hintsUsedCount > 0 ? `hints_${hintsUsedCount}` : formulaWasHidden ? 'autonomous' : 'standard'
 
@@ -247,7 +326,7 @@ Deno.serve(async (req: Request) => {
       {
         p_attempt_id: attemptId,
         p_exercise_id: exerciseId,
-        p_exercise_version: questionRow.version || 1,
+        p_exercise_version: questionVersion,
         p_student_answer: studentAnswer,
         p_is_correct: isCorrect,
         p_score_percent: scorePercent,

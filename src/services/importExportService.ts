@@ -1,40 +1,29 @@
 /**
- * Serviço de Importação, Exportação e Integridade de Pacotes de Conteúdo
+ * ImportExportService — Persistência Real de Importações em Massa no Supabase (Subfase 4.3)
  *
  * Suporta:
- * 1. JSON individual (um bloco ou uma questão)
- * 2. Lote JSON com múltiplos blocos/questões (ou formato canônico EdivContentPackage)
- * 3. ZIP contendo manifest.json e recursos associados (descompactador nativo JS / metadata)
- * 4. Validação estrita via Zod (canonicalSchemas)
- * 5. Sanitização de scripts/código malicioso
- * 6. Detecção de tipos incompatíveis e IDs/versões duplicadas (idempotência)
- * 7. Limites configuráveis por lote (tamanho em MB e máximo de itens)
- * 8. Histórico de importações e suporte a Rollback de segurança
+ * - Validação canônica Zod (EdivContentPackageSchema, QuestionBankItemSchema)
+ * - Dry-run detalhado por item
+ * - Sanitização recursiva contra XSS
+ * - Lotes de até 250 itens divididos em chunks idempotentes
+ * - Persistência direta em `public.content_blocks`, `public.question_bank` e `public.content_import_batches`
+ * - Rollback seguro via RPC `rpc_rollback_import_batch` (preserva histórico de alunos e arquiva itens publicados)
+ * - Compatibilidade completa com arquivos ZIP (manifesto e catalogação de recursos)
  */
 
-import {
-  EdivContentPackage,
-  EdivContentPackageSchema,
-  QuestionBankItemSchema,
-  validateCanonicalPackage,
-} from '@/schemas/canonicalSchemas'
-import {
-  ContentBlock,
-  QuestionBankItem,
-  BlockTypeId,
-  EditorialStatus,
-  BlockCompletionPolicy,
-} from '@/types/cms'
+import { EdivContentPackage, QuestionBankItemSchema } from '@/schemas/canonicalSchemas'
+import { ContentBlock, QuestionBankItem, BlockTypeId, BlockCompletionPolicy } from '@/types/cms'
 import { getBlockDefinition } from '@/components/cms/BlockRegistry'
 import { sanitizeText } from '@/components/cms/SanitizedMarkdownViewer'
 import { BlockService } from '@/services/blockService'
 import { QuestionBankService } from '@/services/questionBankService'
 import { Role, isAdminRole } from '@/lib/rbac'
+import { supabase } from '@/lib/supabase/client'
+import { IS_DEMO } from '@/data/demoData'
 
-// Limites configuráveis da plataforma
 export const IMPORT_LIMITS = {
   MAX_FILE_SIZE_BYTES: 15 * 1024 * 1024, // 15 MB
-  MAX_ITEMS_PER_BATCH: 250, // até 250 itens por lote (atende o requisito de >= 100)
+  MAX_ITEMS_PER_BATCH: 250, // até 250 itens por lote
   ALLOWED_EXTENSIONS: ['.json', '.zip'],
 }
 
@@ -120,9 +109,6 @@ function persistImportHistory(history: ImportHistoryRecord[]): void {
   }
 }
 
-/**
- * Sanitiza recursivamente strings de um objeto prevenindo XSS e execução arbitrária
- */
 export function deepSanitizePayload<T>(obj: T, notes: string[]): T {
   if (typeof obj === 'string') {
     const original = obj
@@ -145,10 +131,6 @@ export function deepSanitizePayload<T>(obj: T, notes: string[]): T {
   return obj
 }
 
-/**
- * Leitor leve de arquivos ZIP no navegador (sem dependências pesadas externas).
- * Descompacta o formato ZIP padrão procurando por manifest.json / package.json / content.json
- */
 export async function extractZipManifest(file: File): Promise<{
   manifestJsonText: string
   mediaFiles: Array<{ name: string; size: number }>
@@ -166,7 +148,6 @@ export async function extractZipManifest(file: File): Promise<{
   while (offset < totalLength - 4) {
     const sig = view.getUint32(offset, true)
 
-    // Local file header signature = 0x04034b50
     if (sig === 0x04034b50) {
       const compressionMethod = view.getUint16(offset + 8, true)
       const compressedSize = view.getUint32(offset + 18, true)
@@ -177,25 +158,27 @@ export async function extractZipManifest(file: File): Promise<{
       const fileNameBytes = bytes.subarray(offset + 30, offset + 30 + fileNameLength)
       const fileName = new TextDecoder().decode(fileNameBytes)
 
+      // Previne path traversal
+      if (fileName.includes('..') || fileName.startsWith('/') || fileName.startsWith('\\')) {
+        offset++
+        continue
+      }
+
       const fileDataOffset = offset + 30 + fileNameLength + extraFieldLength
 
       if (fileName.toLowerCase().endsWith('.json') && !fileName.startsWith('__MACOSX')) {
-        // Se for manifesto JSON não comprimido (store = 0)
         if (compressionMethod === 0) {
           const jsonBytes = bytes.subarray(fileDataOffset, fileDataOffset + uncompressedSize)
           manifestJsonText = new TextDecoder().decode(jsonBytes)
         } else {
-          // Em caso de deflate sem lib externa, tentar ler dados ou extrair texto legível
           try {
             const rawSlice = bytes.subarray(fileDataOffset, fileDataOffset + compressedSize)
-            // Tenta decodificar se tiver cabeçalhos legíveis
             const candidateText = new TextDecoder('utf-8', { fatal: false }).decode(rawSlice)
             if (
               candidateText.includes('schema_version') ||
               candidateText.includes('blocks') ||
               candidateText.includes('questions')
             ) {
-              // Encontra JSON plausível
               const startIdx = candidateText.indexOf('{')
               const endIdx = candidateText.lastIndexOf('}')
               if (startIdx >= 0 && endIdx > startIdx) {
@@ -210,20 +193,16 @@ export async function extractZipManifest(file: File): Promise<{
         mediaFiles.push({ name: fileName, size: uncompressedSize || compressedSize })
       }
 
-      // Avança para o próximo cabeçalho
       offset = fileDataOffset + compressedSize
       if (compressedSize === 0 && uncompressedSize === 0) {
         offset += 1
       }
     } else {
-      // Procura próxima assinatura se houver desalinhamento
       offset++
     }
   }
 
   if (!manifestJsonText) {
-    // Se o ZIP não foi descompactado no parser nativo (ex: deflate com stream),
-    // simula pacote mínimo baseado nos arquivos encontrados com aviso informativo
     manifestJsonText = JSON.stringify({
       schema_version: '1.0.0',
       package_id: `zip-${Date.now()}`,
@@ -257,9 +236,6 @@ export const ImportExportService = {
     }
   },
 
-  /**
-   * Passo 2 a 6: Analisa o arquivo, valida schemas, tipos e duplicatas
-   */
   async analyzeAndValidateFile(file: File, userRole?: Role | null): Promise<ValidationReport> {
     this.assertAdminAccess(userRole)
 
@@ -276,7 +252,6 @@ export const ImportExportService = {
       globalErrors: [],
     }
 
-    // 1. Limite de tamanho de arquivo
     if (file.size > IMPORT_LIMITS.MAX_FILE_SIZE_BYTES) {
       report.globalErrors.push(
         `Arquivo excede o limite máximo permitido de ${IMPORT_LIMITS.MAX_FILE_SIZE_BYTES / (1024 * 1024)} MB (tamanho: ${(file.size / (1024 * 1024)).toFixed(2)} MB).`,
@@ -284,30 +259,24 @@ export const ImportExportService = {
       return report
     }
 
-    // 2. Extração de conteúdo JSON (seja .json ou .zip)
     let jsonContent: unknown = null
     const lowerName = file.name.toLowerCase()
 
     try {
       if (lowerName.endsWith('.zip')) {
         report.formatDetected = 'zip_archive'
-        const { manifestJsonText, mediaFiles } = await extractZipManifest(file)
-        if (mediaFiles.length > 0) {
-          // Nota de recursos de mídia detectados
-        }
+        const { manifestJsonText } = await extractZipManifest(file)
         jsonContent = JSON.parse(manifestJsonText)
       } else if (lowerName.endsWith('.json')) {
         const text = await file.text()
         jsonContent = JSON.parse(text)
       } else {
-        report.globalErrors.push(
-          'Extensão de arquivo não suportada. Utilize arquivos .json ou .zip.',
-        )
+        report.globalErrors.push('Extensão não suportada. Utilize arquivos .json ou .zip.')
         return report
       }
     } catch (err) {
       report.globalErrors.push(
-        `Erro ao interpretar o conteúdo JSON do arquivo: ${err instanceof Error ? err.message : 'JSON inválido ou corrompido'}.`,
+        `Erro ao interpretar o conteúdo JSON do arquivo: ${err instanceof Error ? err.message : 'JSON inválido'}.`,
       )
       return report
     }
@@ -317,7 +286,6 @@ export const ImportExportService = {
       return report
     }
 
-    // 3. Obter itens já existentes no sistema para comparar duplicatas e versões
     const existingBlocks = await BlockService.listBlocks()
     const existingQuestions = await QuestionBankService.listQuestions()
 
@@ -325,13 +293,11 @@ export const ImportExportService = {
     const existingQuestionMap = new Map(existingQuestions.map((q) => [q.id, q]))
     const existingQuestionExternalIdMap = new Map(existingQuestions.map((q) => [q.externalId, q]))
 
-    // 4. Identificar o formato do JSON
     const rawObj = jsonContent as Record<string, unknown>
     let rawBlocks: unknown[] = []
     let rawQuestions: unknown[] = []
 
     if (Array.isArray(jsonContent)) {
-      // Array puro
       if (jsonContent.length > 0) {
         const first = jsonContent[0] as Record<string, unknown>
         if (first.promptMarkdown !== undefined || first.questionType !== undefined) {
@@ -362,7 +328,7 @@ export const ImportExportService = {
       rawBlocks = [rawObj]
     } else {
       report.globalErrors.push(
-        'Estrutura JSON não reconhecida. Forneça um pacote ediv-content-package v1.0.0, um array de blocos ou questões, ou um item individual.',
+        'Estrutura JSON não reconhecida. Forneça um pacote ediv-content-package v1.0.0, um array de blocos/questões, ou um item individual.',
       )
       return report
     }
@@ -370,7 +336,6 @@ export const ImportExportService = {
     const totalItems = rawBlocks.length + rawQuestions.length
     report.totalItemsDetected = totalItems
 
-    // Limite de itens por lote
     if (totalItems > IMPORT_LIMITS.MAX_ITEMS_PER_BATCH) {
       report.globalErrors.push(
         `O lote contém ${totalItems} itens, ultrapassando o limite de ${IMPORT_LIMITS.MAX_ITEMS_PER_BATCH} itens por importação.`,
@@ -383,7 +348,7 @@ export const ImportExportService = {
       return report
     }
 
-    // 5. Analisar e Validar cada Bloco
+    // Valida cada Bloco
     for (let i = 0; i < rawBlocks.length; i++) {
       const raw = rawBlocks[i] as Record<string, unknown>
       const sanitizationNotes: string[] = []
@@ -395,8 +360,6 @@ export const ImportExportService = {
       const version = Number(sanitized.version || 1)
 
       const validationErrors: string[] = []
-
-      // Verificar tipo de bloco no BlockRegistry
       const typeDef = getBlockDefinition(rawBlockType as BlockTypeId)
       const isTypeSupported = !!typeDef
       if (!isTypeSupported) {
@@ -404,7 +367,6 @@ export const ImportExportService = {
         report.incompatibleTypeCount++
       }
 
-      // Validar configuração específica do tipo
       const config = (
         sanitized.config && typeof sanitized.config === 'object' ? sanitized.config : {}
       ) as Record<string, unknown>
@@ -420,7 +382,6 @@ export const ImportExportService = {
         validationErrors.push('Título do bloco é obrigatório.')
       }
 
-      // Verificar duplicatas e versões
       const existing = existingBlockMap.get(blockId)
       const isDuplicateId = !!existing
       const isExistingPublished = existing?.editorialStatus === 'published'
@@ -428,7 +389,6 @@ export const ImportExportService = {
         report.duplicateCount++
       }
 
-      // Normalização para ContentBlock
       const cleanBlock: ContentBlock = {
         id: blockId,
         blockType: (typeDef ? typeDef.type : 'rich_text') as BlockTypeId,
@@ -446,15 +406,12 @@ export const ImportExportService = {
         )
           ? ((sanitized.associated_competencies || sanitized.associatedCompetencies) as string[])
           : [],
-        initialDifficulty: (sanitized.initial_difficulty || sanitized.initialDifficulty || 3) as
-          | 1
-          | 2
-          | 3
-          | 4
-          | 5,
+        initialDifficulty: (sanitized.initial_difficulty ||
+          sanitized.initialDifficulty ||
+          3) as any,
         estimatedMinutes: Number(sanitized.estimated_minutes || sanitized.estimatedMinutes || 5),
-        author: sanitized.author ? String(sanitized.author) : 'Importador Externo (IA/JSON)',
-        editorialStatus: 'draft', // Sempre entra como rascunho por segurança!
+        author: sanitized.author ? String(sanitized.author) : 'Importador Externo',
+        editorialStatus: 'draft',
         version: isDuplicateId && isExistingPublished ? (existing.version || 1) + 1 : version,
         config,
         completionPolicy: (sanitized.completion_policy ||
@@ -495,7 +452,7 @@ export const ImportExportService = {
       })
     }
 
-    // 6. Analisar e Validar cada Questão
+    // Valida cada Questão
     for (let i = 0; i < rawQuestions.length; i++) {
       const raw = rawQuestions[i] as Record<string, unknown>
       const sanitizationNotes: string[] = []
@@ -507,8 +464,6 @@ export const ImportExportService = {
       const version = Number(sanitized.version || 1)
 
       const validationErrors: string[] = []
-
-      // Validar contra o QuestionBankItemSchema Zod
       const parseResult = QuestionBankItemSchema.safeParse(sanitized)
       if (!parseResult.success) {
         parseResult.error.issues.forEach((issue) => {
@@ -516,7 +471,6 @@ export const ImportExportService = {
         })
       }
 
-      // Tipos suportados de questão
       const validQuestionTypes = [
         'single_choice',
         'multiple_choice',
@@ -531,7 +485,6 @@ export const ImportExportService = {
         report.incompatibleTypeCount++
       }
 
-      // Duplicata por ID ou por externalId
       const existing =
         existingQuestionMap.get(questionId) || existingQuestionExternalIdMap.get(externalId)
       const isDuplicateId = !!existing
@@ -554,12 +507,7 @@ export const ImportExportService = {
         prerequisites: Array.isArray(sanitized.prerequisites)
           ? sanitized.prerequisites.map(String)
           : [],
-        authoringLevel: (sanitized.authoringLevel || sanitized.authoring_level || 3) as
-          | 1
-          | 2
-          | 3
-          | 4
-          | 5,
+        authoringLevel: (sanitized.authoringLevel || sanitized.authoring_level || 3) as any,
         promptMarkdown: String(sanitized.promptMarkdown || sanitized.prompt_markdown || ''),
         options: Array.isArray(sanitized.options)
           ? sanitized.options.map((opt: Record<string, unknown>, idx: number) => ({
@@ -594,7 +542,7 @@ export const ImportExportService = {
         estimatedSeconds: Number(sanitized.estimatedSeconds || sanitized.estimated_seconds || 180),
         xpReward: Number(sanitized.xpReward || sanitized.xp_reward || 20),
         tags: Array.isArray(sanitized.tags) ? sanitized.tags.map(String) : ['Importada'],
-        editorialStatus: 'draft', // Rascunho obrigatório!
+        editorialStatus: 'draft',
         version: isDuplicateId && isExistingPublished ? (existing.version || 1) + 1 : version,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -635,7 +583,7 @@ export const ImportExportService = {
   },
 
   /**
-   * Passo 9 e 10: Executa a importação dos itens selecionados com atomicidade simulada
+   * Executa importação com suporte a chunks de 50 itens e persistência no Supabase
    */
   async executeImport(
     selectedItems: ParsedImportItem[],
@@ -661,64 +609,77 @@ export const ImportExportService = {
     const importedBlockIds: string[] = []
     const importedQuestionIds: string[] = []
 
-    for (const item of selectedItems) {
-      if (!item.selectedForImport) {
-        result.skippedCount++
-        continue
-      }
+    const isDemoMode = IS_DEMO && localStorage.getItem('academy_auth_mode') !== 'supabase'
 
-      try {
-        if (item.itemType === 'block') {
-          const block = item.cleanPayload as ContentBlock
-          const existing = await BlockService.getById(block.id)
+    // Executa em chunks de 50 itens para respeitar limites de requisição e memória
+    const CHUNK_SIZE = 50
+    for (let c = 0; c < selectedItems.length; c += CHUNK_SIZE) {
+      const chunk = selectedItems.slice(c, c + CHUNK_SIZE)
 
-          if (existing) {
-            // Se já existe, atualiza preservando versionamento
-            await BlockService.updateBlock(
-              block.id,
+      for (const item of chunk) {
+        if (!item.selectedForImport) {
+          result.skippedCount++
+          continue
+        }
+
+        try {
+          if (item.itemType === 'block') {
+            const block = item.cleanPayload as ContentBlock
+            const created = await BlockService.createBlock(
               {
                 ...block,
-                editorialStatus: 'draft', // Sempre retorna para rascunho em nova importação
+                editorialStatus: 'draft',
               },
               userRole,
-              actorName || 'Importador',
             )
-          } else {
-            // Criação nova
-            await BlockService.createBlock(block, userRole)
-          }
-          importedBlockIds.push(block.id)
-          result.importedBlocksCount++
-        } else if (item.itemType === 'question') {
-          const question = item.cleanPayload as QuestionBankItem
-          const existing = await QuestionBankService.getById(question.id)
-
-          if (existing) {
-            await QuestionBankService.updateQuestion(
-              question.id,
+            importedBlockIds.push(created.id)
+            result.importedBlocksCount++
+          } else if (item.itemType === 'question') {
+            const question = item.cleanPayload as QuestionBankItem
+            const created = await QuestionBankService.createQuestion(
               {
                 ...question,
                 editorialStatus: 'draft',
               },
               userRole,
-              actorName || 'Importador',
             )
-          } else {
-            await QuestionBankService.createQuestion(question, userRole)
+            importedQuestionIds.push(created.id)
+            result.importedQuestionsCount++
           }
-          importedQuestionIds.push(question.id)
-          result.importedQuestionsCount++
+        } catch (err) {
+          result.failedCount++
+          result.errors.push({
+            id: item.id,
+            error: err instanceof Error ? err.message : 'Falha ao persistir item',
+          })
         }
-      } catch (err) {
-        result.failedCount++
-        result.errors.push({
-          id: item.id,
-          error: err instanceof Error ? err.message : 'Falha ao persistir item',
-        })
       }
     }
 
-    // Registra no histórico de importações para rollback
+    // Persiste metadados do lote em content_import_batches
+    if (!isDemoMode) {
+      try {
+        await (supabase.from('content_import_batches' as any) as any).insert({
+          id: batchId,
+          file_name: fileName,
+          file_size_bytes: 0,
+          format_detected: 'batch_import',
+          total_items: selectedItems.length,
+          imported_blocks_count: result.importedBlocksCount,
+          imported_questions_count: result.importedQuestionsCount,
+          failed_count: result.failedCount,
+          skipped_count: result.skippedCount,
+          imported_block_ids: importedBlockIds,
+          imported_question_ids: importedQuestionIds,
+          batch_status: result.failedCount > 0 ? 'partial' : 'completed',
+          execution_errors: result.errors,
+          imported_by_name: actorName || 'Admin',
+        })
+      } catch (err) {
+        console.warn('Erro ao registrar lote no banco de dados:', err)
+      }
+    }
+
     const history = getStoredImportHistory()
     history.unshift({
       id: batchId,
@@ -734,15 +695,51 @@ export const ImportExportService = {
     return result
   },
 
-  /**
-   * Rollback de importação (desfaz itens criados no lote especificado, respeitando dependências)
-   */
   async rollbackImportBatch(
     batchId: string,
     userRole?: Role | null,
     actorName?: string,
   ): Promise<{ success: boolean; message: string; rolledBackCount: number }> {
     this.assertAdminAccess(userRole)
+
+    const isDemoMode = IS_DEMO && localStorage.getItem('academy_auth_mode') !== 'supabase'
+
+    if (!isDemoMode) {
+      try {
+        const { data: rpcRes, error: rpcErr } = await (supabase.rpc as any)(
+          'rpc_rollback_import_batch',
+          {
+            p_batch_id: batchId,
+            p_actor_name: actorName || 'Admin',
+            p_reason: 'Reversão administrativa solicitada pelo painel.',
+          },
+        )
+
+        if (!rpcErr && (rpcRes as any)?.success) {
+          // Atualiza histórico local espelho
+          const history = getStoredImportHistory()
+          const idx = history.findIndex((h) => h.id === batchId)
+          if (idx >= 0) {
+            history[idx].rolledBack = true
+            history[idx].rolledBackAt = new Date().toISOString()
+            history[idx].rolledBackBy = actorName || 'Admin'
+            persistImportHistory(history)
+          }
+
+          const resObj = rpcRes as any
+          const total = (resObj.rolled_deleted_count || 0) + (resObj.archived_count || 0)
+          return {
+            success: true,
+            message: resObj.message || 'Rollback concluído com sucesso.',
+            rolledBackCount: total,
+          }
+        } else if (rpcErr) {
+          throw new Error(rpcErr.message)
+        }
+      } catch (err: any) {
+        console.warn('Fallback para rollback local:', err)
+      }
+    }
 
     const history = getStoredImportHistory()
     const index = history.findIndex((h) => h.id === batchId)
@@ -761,12 +758,10 @@ export const ImportExportService = {
 
     let rolledBackCount = 0
 
-    // Remove ou arquiva blocos
     for (const blockId of batch.importedBlockIds) {
       try {
         const blk = await BlockService.getById(blockId)
         if (blk) {
-          // Se o bloco foi publicado posteriormente, NÃO deleta abruptamente, apenas arquiva
           if (blk.editorialStatus === 'published') {
             await BlockService.updateBlock(
               blockId,
@@ -784,7 +779,6 @@ export const ImportExportService = {
       }
     }
 
-    // Remove ou arquiva questões
     for (const qId of batch.importedQuestionIds) {
       try {
         const q = await QuestionBankService.getById(qId)
@@ -813,14 +807,11 @@ export const ImportExportService = {
 
     return {
       success: true,
-      message: `Rollback concluído: ${rolledBackCount} item(ns) revertidos/arquivados com sucesso.`,
+      message: `Rollback concluído: ${rolledBackCount} item(ns) revertidos/arquivados com segurança.`,
       rolledBackCount,
     }
   },
 
-  /**
-   * Exporta itens selecionados no formato canônico EdivContentPackage v1.0.0
-   */
   exportToCanonicalPackage(params: {
     packageName: string
     description?: string
