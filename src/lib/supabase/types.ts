@@ -672,6 +672,70 @@ export type Database = {
           },
         ]
       }
+      enrollment_audit_history: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          product_id: string
+          reason: string | null
+          target_user_id: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          product_id: string
+          reason?: string | null
+          target_user_id: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          product_id?: string
+          reason?: string | null
+          target_user_id?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'enrollment_audit_history_actor_id_fkey'
+            columns: ['actor_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'enrollment_audit_history_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'enrollment_audit_history_target_user_id_fkey'
+            columns: ['target_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       enrollments: {
         Row: {
           completed_at: string | null
@@ -779,69 +843,229 @@ export type Database = {
           },
         ]
       }
+      material_access_logs: {
+        Row: {
+          accessed_at: string
+          action_type: string
+          asset_id: string
+          id: string
+          metadata: Json | null
+          page_reached: number | null
+          product_id: string | null
+          reading_seconds: number | null
+          total_pages: number | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          action_type: string
+          asset_id: string
+          id?: string
+          metadata?: Json | null
+          page_reached?: number | null
+          product_id?: string | null
+          reading_seconds?: number | null
+          total_pages?: number | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string
+          action_type?: string
+          asset_id?: string
+          id?: string
+          metadata?: Json | null
+          page_reached?: number | null
+          product_id?: string | null
+          reading_seconds?: number | null
+          total_pages?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'material_access_logs_asset_id_fkey'
+            columns: ['asset_id']
+            isOneToOne: false
+            referencedRelation: 'media_assets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'material_access_logs_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'material_access_logs_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      media_asset_versions: {
+        Row: {
+          asset_id: string
+          file_hash: string | null
+          file_size_bytes: number | null
+          id: string
+          public_url: string | null
+          published_at: string
+          published_by: string | null
+          snapshot: Json
+          storage_bucket: string
+          storage_path: string | null
+          title: string
+          version_number: number
+        }
+        Insert: {
+          asset_id: string
+          file_hash?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          public_url?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot?: Json
+          storage_bucket: string
+          storage_path?: string | null
+          title: string
+          version_number: number
+        }
+        Update: {
+          asset_id?: string
+          file_hash?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          public_url?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot?: Json
+          storage_bucket?: string
+          storage_path?: string | null
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'media_asset_versions_asset_id_fkey'
+            columns: ['asset_id']
+            isOneToOne: false
+            referencedRelation: 'media_assets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'media_asset_versions_published_by_fkey'
+            columns: ['published_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       media_assets: {
         Row: {
           access_rules: Json | null
+          allow_download: boolean | null
           asset_type: Database['public']['Enums']['media_asset_type']
+          category_tag: string | null
           created_at: string
           created_by: string | null
           description: string | null
           duration_seconds: number | null
           external_id: string
+          file_extension: string | null
+          file_hash: string | null
           file_size_bytes: number | null
+          folder_path: string | null
           id: string
+          is_archived: boolean | null
+          is_mandatory_reading: boolean | null
           is_pending_storage: boolean | null
           license_info: string | null
+          mime_type: string | null
+          original_filename: string | null
           provider: Database['public']['Enums']['media_storage_provider']
           public_url: string
           related_product_id: string | null
+          root_asset_id: string | null
+          storage_bucket: string | null
+          storage_path: string | null
           tags: string[] | null
           thumbnail_url: string | null
           title: string
           transcript_text: string | null
           updated_at: string
+          version: number | null
         }
         Insert: {
           access_rules?: Json | null
+          allow_download?: boolean | null
           asset_type: Database['public']['Enums']['media_asset_type']
+          category_tag?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           external_id: string
+          file_extension?: string | null
+          file_hash?: string | null
           file_size_bytes?: number | null
+          folder_path?: string | null
           id?: string
+          is_archived?: boolean | null
+          is_mandatory_reading?: boolean | null
           is_pending_storage?: boolean | null
           license_info?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           provider?: Database['public']['Enums']['media_storage_provider']
           public_url: string
           related_product_id?: string | null
+          root_asset_id?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
           title: string
           transcript_text?: string | null
           updated_at?: string
+          version?: number | null
         }
         Update: {
           access_rules?: Json | null
+          allow_download?: boolean | null
           asset_type?: Database['public']['Enums']['media_asset_type']
+          category_tag?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           external_id?: string
+          file_extension?: string | null
+          file_hash?: string | null
           file_size_bytes?: number | null
+          folder_path?: string | null
           id?: string
+          is_archived?: boolean | null
+          is_mandatory_reading?: boolean | null
           is_pending_storage?: boolean | null
           license_info?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           provider?: Database['public']['Enums']['media_storage_provider']
           public_url?: string
           related_product_id?: string | null
+          root_asset_id?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
           transcript_text?: string | null
           updated_at?: string
+          version?: number | null
         }
         Relationships: [
           {
@@ -856,6 +1080,13 @@ export type Database = {
             columns: ['related_product_id']
             isOneToOne: false
             referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'media_assets_root_asset_id_fkey'
+            columns: ['root_asset_id']
+            isOneToOne: false
+            referencedRelation: 'media_assets'
             referencedColumns: ['id']
           },
         ]
@@ -1712,6 +1943,19 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_grant_enrollment: {
+        Args: {
+          p_product_id: string
+          p_reason?: string
+          p_user_id: string
+          p_valid_until?: string
+        }
+        Returns: Json
+      }
+      admin_revoke_enrollment: {
+        Args: { p_product_id: string; p_reason?: string; p_user_id: string }
+        Returns: Json
+      }
       admin_revoke_role: {
         Args: {
           p_role_to_revoke: Database['public']['Enums']['user_role_type']
@@ -1720,6 +1964,14 @@ export type Database = {
         Returns: Json
       }
       can_edit_content: { Args: { user_uid: string }; Returns: boolean }
+      check_media_deletion_allowed: {
+        Args: { p_asset_id: string }
+        Returns: Json
+      }
+      check_user_media_access: {
+        Args: { asset_uid: string; user_uid: string }
+        Returns: boolean
+      }
       has_entitlement: {
         Args: { prod_id: string; user_uid: string }
         Returns: boolean
@@ -1791,8 +2043,23 @@ export type Database = {
       editorial_status: 'draft' | 'in_review' | 'published' | 'archived'
       enrollment_status: 'active' | 'completed' | 'suspended' | 'expired'
       entitlement_tier: 'base_subscription' | 'technical_extension' | 'specialized_track'
-      media_asset_type: 'youtube_video' | 'private_video' | 'pdf_document' | 'audio' | 'image'
-      media_storage_provider: 'youtube' | 'cloudflare_stream' | 's3_storage' | 'external_url'
+      media_asset_type:
+        | 'youtube_video'
+        | 'private_video'
+        | 'pdf_document'
+        | 'audio'
+        | 'image'
+        | 'cad_model'
+        | 'spreadsheet'
+        | 'archive'
+        | 'exercise_file'
+      media_storage_provider:
+        | 'youtube'
+        | 'cloudflare_stream'
+        | 's3_storage'
+        | 'external_url'
+        | 'supabase_storage'
+        | 'vimeo'
       question_type:
         | 'single_choice'
         | 'multiple_choice'
@@ -1946,8 +2213,25 @@ export const Constants = {
       editorial_status: ['draft', 'in_review', 'published', 'archived'],
       enrollment_status: ['active', 'completed', 'suspended', 'expired'],
       entitlement_tier: ['base_subscription', 'technical_extension', 'specialized_track'],
-      media_asset_type: ['youtube_video', 'private_video', 'pdf_document', 'audio', 'image'],
-      media_storage_provider: ['youtube', 'cloudflare_stream', 's3_storage', 'external_url'],
+      media_asset_type: [
+        'youtube_video',
+        'private_video',
+        'pdf_document',
+        'audio',
+        'image',
+        'cad_model',
+        'spreadsheet',
+        'archive',
+        'exercise_file',
+      ],
+      media_storage_provider: [
+        'youtube',
+        'cloudflare_stream',
+        's3_storage',
+        'external_url',
+        'supabase_storage',
+        'vimeo',
+      ],
       question_type: [
         'single_choice',
         'multiple_choice',

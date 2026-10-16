@@ -42,6 +42,10 @@ import {
   runSubphase44RealBackendTests,
   Subphase44SuiteReport,
 } from '@/lib/subphase44RealTestRunner'
+import {
+  runSubphase45SecurityAudit,
+  Subphase45SuiteReport,
+} from '@/lib/subphase45SecurityAuditRunner'
 
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -80,6 +84,7 @@ export const ActivityPlayerPage: React.FC = () => {
     phase3Results?: Phase3TestReport[]
     subphase43Report?: Subphase43SuiteReport
     subphase44Report?: Subphase44SuiteReport
+    subphase45Report?: Subphase45SuiteReport
   }>({ running: false })
 
   const handleRunDiagnostics = async () => {
@@ -90,30 +95,35 @@ export const ActivityPlayerPage: React.FC = () => {
       const p3Results = await runPhase3AutomatedTests()
       const s43Report = await runSubphase43RealBackendTests()
       const s44Report = await runSubphase44RealBackendTests()
+      const s45Report = await runSubphase45SecurityAudit()
 
       const p3Passed = p3Results.every((r) => r.passed)
       const s43Passed = s43Report.failedCount === 0
       const s44Passed = s44Report.failedCount === 0
+      const s45Passed = s45Report.failedCount === 0
       const totalPassed =
         outcome.passedCount +
         p3Results.filter((r) => r.passed).length +
         s43Report.passedCount +
-        s44Report.passedCount
+        s44Report.passedCount +
+        s45Report.passedCount
       const totalFailed =
         outcome.failedCount +
         p3Results.filter((r) => !r.passed).length +
         s43Report.failedCount +
-        s44Report.failedCount
+        s44Report.failedCount +
+        s45Report.failedCount
 
       setTestSummary({
         running: false,
-        allPassed: outcome.allPassed && p3Passed && s43Passed && s44Passed,
+        allPassed: outcome.allPassed && p3Passed && s43Passed && s44Passed && s45Passed,
         passedCount: totalPassed,
         failedCount: totalFailed,
         results: outcome.results,
         phase3Results: p3Results,
         subphase43Report: s43Report,
         subphase44Report: s44Report,
+        subphase45Report: s45Report,
       })
     } catch (diagErr) {
       console.error('Erro na execução dos testes:', diagErr)
@@ -918,6 +928,43 @@ export const ActivityPlayerPage: React.FC = () => {
                             ) : (
                               <span className="text-[#C86F63] font-bold shrink-0">FAIL</span>
                             )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {testSummary.subphase45Report && (
+                      <>
+                        <p className="text-[10px] text-[#01B59A] uppercase tracking-wider font-bold pt-3">
+                          Subfase 4.5 — Auditoria Integrada de Segurança, Confiabilidade & RBAC:
+                        </p>
+                        {testSummary.subphase45Report.results.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-start justify-between gap-2 p-2 rounded bg-[#152228] border border-[#294149]/60"
+                          >
+                            <div className="space-y-0.5">
+                              <span className="text-[11px] text-white block font-medium">
+                                {r.id}. {r.title} ({r.category})
+                              </span>
+                              <span className="text-[10px] text-[#A8BBC0] block leading-relaxed">
+                                {r.details}
+                              </span>
+                              <span className="text-[9px] text-[#55707A] block font-mono">
+                                Duração: {r.durationMs}ms
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded ${
+                                r.status === 'APROVADO'
+                                  ? 'bg-[#01B59A]/20 text-[#01B59A]'
+                                  : r.status === 'NÃO EXECUTÁVEL'
+                                    ? 'bg-[#C69B4B]/20 text-[#C69B4B]'
+                                    : 'bg-[#C86F63]/20 text-[#C86F63]'
+                              }`}
+                            >
+                              {r.status}
+                            </span>
                           </div>
                         ))}
                       </>

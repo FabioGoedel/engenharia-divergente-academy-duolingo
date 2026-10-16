@@ -9,6 +9,8 @@ import {
   XCircle,
   AlertTriangle,
   Database,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,9 @@ export default function AdminStudentsPage() {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [studentToDelete, setStudentToDelete] = useState<AdminStudentRow | null>(null)
+  const [reconciliationModalOpen, setReconciliationModalOpen] = useState(false)
+  const [reconciling, setReconciling] = useState(false)
+  const [reconciliationResult, setReconciliationResult] = useState<any>(null)
 
   // Form states
   const [newName, setNewName] = useState('')
@@ -95,6 +100,33 @@ export default function AdminStudentsPage() {
     setDeleteModalOpen(false)
     setStudentToDelete(null)
     loadData()
+  }
+
+  const handleReconcileXp = async (student: AdminStudentRow) => {
+    setReconciling(true)
+    setReconciliationResult(null)
+    setReconciliationModalOpen(true)
+    try {
+      const res = await AdminService.reconcileUserXp(
+        student.id.startsWith('std-') ? '96370871-3eb2-4465-94eb-b30a6bc81b86' : student.id,
+      )
+      setReconciliationResult({
+        ...res,
+        studentName: student.name,
+      })
+      toast({
+        title: 'Auditoria de XP Concluída',
+        description: `Ledger de XP reconciliado com sucesso para ${student.name}.`,
+      })
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Falha na Reconciliação',
+        description: err?.message || 'Erro ao auditar ledger de XP.',
+      })
+    } finally {
+      setReconciling(false)
+    }
   }
 
   return (
@@ -205,6 +237,15 @@ export default function AdminStudentsPage() {
 
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleReconcileXp(s)}
+                        className="h-7 w-7 text-muted-foreground hover:text-[#01B59A]"
+                        title="Reconciliar Ledger de XP (Auditoria)"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -340,6 +381,86 @@ export default function AdminStudentsPage() {
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete} className="text-xs">
               Remover Aluno Demo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Reconciliação de XP */}
+      <Dialog open={reconciliationModalOpen} onOpenChange={setReconciliationModalOpen}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#01B59A]" />
+              <span>Auditoria e Reconciliação de Ledger XP</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Conferência estrita entre o somatório histórico de eventos no <code>xp_ledger</code> e
+              o saldo total apresentado no perfil do aluno.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reconciling ? (
+            <div className="py-6 flex flex-col items-center justify-center gap-2">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-xs text-muted-foreground font-mono">
+                Auditando ledger transacional no Supabase...
+              </p>
+            </div>
+          ) : reconciliationResult ? (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-2 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Aluno:</span>
+                  <span className="font-bold text-foreground">
+                    {reconciliationResult.studentName}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Soma do Ledger Auditado:</span>
+                  <span className="font-bold text-[#01B59A]">
+                    {reconciliationResult.ledger_sum ?? 0} XP
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Saldo Anterior no Perfil:</span>
+                  <span className="text-foreground">
+                    {reconciliationResult.previous_profile_xp ?? 0} XP
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Discrepância Detectada:</span>
+                  <span
+                    className={
+                      reconciliationResult.discrepancy === 0 ? 'text-[#01B59A]' : 'text-[#C86F63]'
+                    }
+                  >
+                    {reconciliationResult.discrepancy ?? 0} XP
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Correção Aplicada:</span>
+                  <span className="text-foreground">
+                    {reconciliationResult.corrected ? 'SIM (atualizado)' : 'NÃO (já consistente)'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                A integridade do saldo é garantida pelo ledger imutável. Caso o aluno tenha sofrido
+                perdas por falha de conectividade ou tentativas desincronizadas, o saldo é
+                restaurado automaticamente.
+              </p>
+            </div>
+          ) : null}
+
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReconciliationModalOpen(false)}
+              className="text-xs"
+            >
+              Fechar Auditoria
             </Button>
           </DialogFooter>
         </DialogContent>

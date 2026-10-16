@@ -14,6 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   const location = useLocation()
   const { toast } = useToast()
 
+  // Se o usuário estiver carregando a rota admin com permissão de admin, mas a rota requerer admin
   const isEditorialRestricted = Boolean(
     isAuthenticated &&
     requiredRole === 'content_editor' &&
