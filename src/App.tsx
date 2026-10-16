@@ -33,6 +33,7 @@ import AdminStudentsPage from '@/pages/admin/AdminStudentsPage'
 import AdminUsersRbacPage from '@/pages/admin/AdminUsersRbacPage'
 import AdminCoursesPage from '@/pages/admin/AdminCoursesPage'
 import AdminEnrollmentsPage from '@/pages/admin/AdminEnrollmentsPage'
+import AdminGamificationPage from '@/pages/admin/AdminGamificationPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
 
 // Páginas CMS e Multimídia (Fase 2)
@@ -242,6 +243,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminEnrollmentsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/gamificacao"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminGamificationPage />
                     </ProtectedRoute>
                   }
                 />

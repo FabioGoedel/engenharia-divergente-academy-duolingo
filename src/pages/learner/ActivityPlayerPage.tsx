@@ -46,6 +46,7 @@ import {
   runSubphase45SecurityAudit,
   Subphase45SuiteReport,
 } from '@/lib/subphase45SecurityAuditRunner'
+import { runPhase5RealBackendTests, Phase5SuiteReport } from '@/lib/phase5RealTestRunner'
 
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -85,6 +86,7 @@ export const ActivityPlayerPage: React.FC = () => {
     subphase43Report?: Subphase43SuiteReport
     subphase44Report?: Subphase44SuiteReport
     subphase45Report?: Subphase45SuiteReport
+    phase5Report?: Phase5SuiteReport
   }>({ running: false })
 
   const handleRunDiagnostics = async () => {
@@ -96,27 +98,31 @@ export const ActivityPlayerPage: React.FC = () => {
       const s43Report = await runSubphase43RealBackendTests()
       const s44Report = await runSubphase44RealBackendTests()
       const s45Report = await runSubphase45SecurityAudit()
+      const p5Report = await runPhase5RealBackendTests()
 
       const p3Passed = p3Results.every((r) => r.passed)
       const s43Passed = s43Report.failedCount === 0
       const s44Passed = s44Report.failedCount === 0
       const s45Passed = s45Report.failedCount === 0
+      const p5Passed = p5Report.failedTests === 0
       const totalPassed =
         outcome.passedCount +
         p3Results.filter((r) => r.passed).length +
         s43Report.passedCount +
         s44Report.passedCount +
-        s45Report.passedCount
+        s45Report.passedCount +
+        p5Report.passedTests
       const totalFailed =
         outcome.failedCount +
         p3Results.filter((r) => !r.passed).length +
         s43Report.failedCount +
         s44Report.failedCount +
-        s45Report.failedCount
+        s45Report.failedCount +
+        p5Report.failedTests
 
       setTestSummary({
         running: false,
-        allPassed: outcome.allPassed && p3Passed && s43Passed && s44Passed && s45Passed,
+        allPassed: outcome.allPassed && p3Passed && s43Passed && s44Passed && s45Passed && p5Passed,
         passedCount: totalPassed,
         failedCount: totalFailed,
         results: outcome.results,
@@ -124,6 +130,7 @@ export const ActivityPlayerPage: React.FC = () => {
         subphase43Report: s43Report,
         subphase44Report: s44Report,
         subphase45Report: s45Report,
+        phase5Report: p5Report,
       })
     } catch (diagErr) {
       console.error('Erro na execução dos testes:', diagErr)

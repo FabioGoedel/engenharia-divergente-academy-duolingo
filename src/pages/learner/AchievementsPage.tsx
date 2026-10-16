@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Award,
   Flame,
@@ -8,17 +8,69 @@ import {
   Crosshair,
   MessageSquareCheck,
   Lock,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { ACHIEVEMENTS } from '@/data/demoData'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  GamificationService,
+  GamificationLevel,
+  AchievementItem,
+} from '@/services/gamificationService'
 
 export default function AchievementsPage() {
-  const { user } = useAuth()
+  const { user, authMode } = useAuth()
+  const isReal = authMode === 'real' && Boolean(user?.id && !user.id.startsWith('demo-'))
+  const userId = user?.id || 'demo-student-user'
 
-  const earnedAchievements = ACHIEVEMENTS.filter((a) => a.earned)
+  const [loading, setLoading] = useState(true)
+  const [achievements, setAchievements] = useState<AchievementItem[]>([])
+  const [levels, setLevels] = useState<GamificationLevel[]>([])
+  const [levelInfo, setLevelInfo] = useState<{
+    currentLevel: GamificationLevel
+    nextLevel?: GamificationLevel
+    progressPercent: number
+    xpToNext: number
+  } | null>(null)
+
+  useEffect(() => {
+    async function loadAchievements() {
+      setLoading(true)
+      try {
+        const [lvlList, achList] = await Promise.all([
+          GamificationService.listLevels(),
+          GamificationService.listAchievementsForStudent(userId),
+        ])
+
+        setLevels(lvlList)
+        setAchievements(achList)
+
+        const totalXp = user?.totalXp || 0
+        const calc = GamificationService.calculateLevelFromXp(totalXp, lvlList)
+        setLevelInfo(calc)
+
+        // Se for usuário real, checa se tem conquistas elegíveis pendentes
+        if (isReal && user?.id) {
+          GamificationService.checkAndAwardEligibleAchievements(user.id).then((newOnes) => {
+            if (newOnes.length) {
+              GamificationService.listAchievementsForStudent(user.id).then(setAchievements)
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar conquistas:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAchievements()
+  }, [userId, isReal, user?.totalXp])
+
+  const earnedAchievements = achievements.filter((a) => a.earned)
   const earnedXp = earnedAchievements.reduce((acc, curr) => acc + curr.xpReward, 0)
 
   const renderIcon = (name: string) => {
@@ -31,107 +83,187 @@ export default function AchievementsPage() {
         return <Crosshair className="h-5 w-5" />
       case 'ShieldCheck':
         return <ShieldCheck className="h-5 w-5" />
-      case 'MessageSquareCheck':
+      case 'CheckCircle2':
+        return <CheckCircle2 className="h-5 w-5" />
+      case 'RotateCcw':
+        return <RotateCcw className="h-5 w-5" />
+      case 'Sparkles':
+        return <Sparkles className="h-5 w-5" />
       default:
-        return <MessageSquareCheck className="h-5 w-5" />
+        return <Award className="h-5 w-5" />
     }
   }
 
+  if (loading) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#01B59A] border-t-transparent mx-auto" />
+        <p className="text-xs font-mono text-[#A8BBC0] uppercase tracking-wider">
+          Carregando catálogo de conquistas e níveis...
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
       {/* Cabeçalho */}
-      <div className="pb-4 border-b border-border space-y-1">
-        <div className="flex items-center gap-2 text-xs font-mono text-primary uppercase tracking-wider">
+      <div className="pb-4 border-b border-[#294149] space-y-1">
+        <div className="flex items-center gap-2 text-xs font-mono text-[#01B59A] uppercase tracking-wider">
           <Award className="h-4 w-4" />
-          <span>Gamificação Sóbria • Reconhecimento Técnico</span>
+          <span>Gamificação Sóbria • Reconhecimento Técnico Profissional</span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
-          Conquistas & Pontos de Experiência (XP)
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+          Níveis, Insígnias & Pontos de Experiência (XP)
         </h1>
-        <p className="text-xs md:text-sm text-muted-foreground">
-          Premiação por rigor metódico, constância e resolução de casos complexos de engenharia.
+        <p className="text-xs md:text-sm text-[#A8BBC0]">
+          Reconhecimento fundamentado no método de cálculo, constância e resolução de casos
+          complexos. Sem placares públicos ou comparações predatórias.
         </p>
       </div>
 
       {/* Cartões de Status Superior */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-card border-border">
+        {/* Sequência Ativa */}
+        <Card className="bg-[#152228] border-[#294149]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-mono text-muted-foreground uppercase">
+              <p className="text-[11px] font-mono text-[#A8BBC0] uppercase">
                 Sequência Ativa (Streak)
               </p>
-              <h3 className="text-2xl font-bold font-mono text-foreground mt-1 flex items-center gap-1.5">
-                <Flame className="h-5 w-5 text-orange-500" />
-                <span>{user?.streakDays || 14} Dias</span>
+              <h3 className="text-2xl font-bold font-mono text-white mt-1 flex items-center gap-1.5">
+                <Flame className="h-5 w-5 text-orange-400" />
+                <span>{user?.streakDays || 1} Dias</span>
               </h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Estudo ativo sem pausas</p>
+              <p className="text-[11px] text-[#A8BBC0] mt-0.5">Estudo ativo e focado</p>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
               <Flame className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        {/* Nível Técnico e XP */}
+        <Card className="bg-[#152228] border-[#294149]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-mono text-muted-foreground uppercase">
-                XP Técnico Total
-              </p>
-              <h3 className="text-2xl font-bold font-mono text-primary mt-1">
-                {user?.totalXp || 2840} XP
+              <p className="text-[11px] font-mono text-[#A8BBC0] uppercase">XP Técnico Auditável</p>
+              <h3 className="text-2xl font-bold font-mono text-[#01B59A] mt-1">
+                {user?.totalXp || 0} XP
               </h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Nível 04: Analista Estrutural Jr.
+              <p className="text-[11px] text-[#A8BBC0] mt-0.5">
+                {levelInfo
+                  ? `Nível ${levelInfo.currentLevel.levelNumber}: ${levelInfo.currentLevel.title}`
+                  : 'Iniciante'}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-[#01B59A]/15 text-[#01B59A] flex items-center justify-center shrink-0">
               <Sparkles className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        {/* Conquistas Desbloqueadas */}
+        <Card className="bg-[#152228] border-[#294149]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-mono text-muted-foreground uppercase">
-                Medalhas Desbloqueadas
+              <p className="text-[11px] font-mono text-[#A8BBC0] uppercase">
+                Insígnias Desbloqueadas
               </p>
-              <h3 className="text-2xl font-bold font-mono text-foreground mt-1">
-                {earnedAchievements.length} de {ACHIEVEMENTS.length}
+              <h3 className="text-2xl font-bold font-mono text-white mt-1">
+                {earnedAchievements.length} de {achievements.length}
               </h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {Math.round((earnedAchievements.length / ACHIEVEMENTS.length) * 100)}% do quadro
+              <p className="text-[11px] text-[#A8BBC0] mt-0.5">
+                {achievements.length > 0
+                  ? `${Math.round((earnedAchievements.length / achievements.length) * 100)}% do quadro completo`
+                  : 'Carregando quadro'}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#C69B4B]/10 text-[#C69B4B] flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-[#C69B4B]/15 text-[#C69B4B] flex items-center justify-center shrink-0">
               <Award className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Grade de Conquistas */}
+      {/* Régua de Níveis Técnicos Configuráveis */}
+      {levelInfo && (
+        <Card className="bg-[#0C1317] border-[#294149]">
+          <CardHeader className="pb-3 border-b border-[#294149]/60">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#01B59A]" />
+                  <span>Jornada de Níveis Técnicos</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-[#A8BBC0]">
+                  Progresso contínuo de carreira sem rebaixamentos punitivos.
+                </CardDescription>
+              </div>
+              <span className="text-xs font-mono text-[#01B59A]">
+                Progresso: {levelInfo.progressPercent}%
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-4">
+            <Progress value={levelInfo.progressPercent} className="h-2 bg-[#152228]" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2">
+              {levels.map((lvl) => {
+                const isCurrent = lvl.levelNumber === levelInfo.currentLevel.levelNumber
+                const isPassed = (user?.totalXp || 0) >= lvl.minXp
+
+                return (
+                  <div
+                    key={lvl.id}
+                    className={`p-2.5 rounded-xl border text-xs font-mono transition-all ${
+                      isCurrent
+                        ? 'border-[#01B59A] bg-[#01B59A]/15 ring-2 ring-[#01B59A]/30 text-white'
+                        : isPassed
+                          ? 'border-[#01B59A]/40 bg-[#152228] text-[#01B59A]'
+                          : 'border-[#294149] bg-[#0C1317] text-[#A8BBC0] opacity-60'
+                    }`}
+                  >
+                    <span className="text-[10px] block font-bold">Nível {lvl.levelNumber}</span>
+                    <p className="font-semibold truncate text-[11px] text-white mt-0.5">
+                      {lvl.title}
+                    </p>
+                    <span className="text-[9px] text-[#A8BBC0] block mt-1">{lvl.minXp} XP</span>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Grade de Conquistas Reais */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Quadro de Insígnias e Marcos</h2>
-            <p className="text-xs text-muted-foreground">
-              Sem efeitos visuais infantis: design sóbrio focado na evolução profissional.
+            <h2 className="text-lg font-bold text-white">
+              Quadro de Insígnias e Marcos de Engenharia
+            </h2>
+            <p className="text-xs text-[#A8BBC0]">
+              Design sóbrio para engenheiros. Reconhece cálculo independente, revisões espaçadas e
+              constância.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-muted-foreground">Dados de Demonstração</span>
+          <Badge
+            variant="outline"
+            className="border-[#01B59A]/40 text-[#01B59A] font-mono text-[10px]"
+          >
+            Supabase Ledger Sincronizado
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ACHIEVEMENTS.map((ach) => (
+          {achievements.map((ach) => (
             <Card
               key={ach.id}
-              className={`bg-card border-border transition-all ${
+              className={`transition-all ${
                 ach.earned
-                  ? 'border-border hover:border-primary/50'
-                  : 'opacity-60 border-dashed bg-card/60'
+                  ? 'bg-[#152228] border-[#294149] hover:border-[#01B59A]/60'
+                  : 'bg-[#0C1317]/80 border-dashed border-[#294149]/60 opacity-60'
               }`}
             >
               <CardContent className="p-5 space-y-4">
@@ -139,11 +271,11 @@ export default function AchievementsPage() {
                   <div
                     className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
                       ach.earned
-                        ? 'bg-primary/15 text-primary border border-primary/30'
-                        : 'bg-muted text-muted-foreground border border-border'
+                        ? 'bg-[#01B59A]/15 text-[#01B59A] border border-[#01B59A]/30'
+                        : 'bg-[#152228] text-[#A8BBC0] border border-[#294149]'
                     }`}
                   >
-                    {renderIcon(ach.icon)}
+                    {renderIcon(ach.iconName)}
                   </div>
 
                   <div className="text-right">
@@ -154,33 +286,35 @@ export default function AchievementsPage() {
                           ? 'border-[#C69B4B] text-[#C69B4B] bg-[#C69B4B]/10'
                           : ach.rarity === 'Épica'
                             ? 'border-purple-500 text-purple-400 bg-purple-500/10'
-                            : 'border-border text-muted-foreground'
+                            : 'border-[#294149] text-[#A8BBC0]'
                       }`}
                     >
                       {ach.rarity}
                     </Badge>
-                    <p className="text-[10px] font-mono text-primary mt-1 font-bold">
+                    <p className="text-[10px] font-mono text-[#01B59A] mt-1 font-bold">
                       +{ach.xpReward} XP
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
                     <span>{ach.title}</span>
-                    {!ach.earned && <Lock className="h-3 w-3 text-muted-foreground" />}
+                    {!ach.earned && <Lock className="h-3 w-3 text-[#A8BBC0]" />}
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    {ach.description}
-                  </p>
+                  <p className="text-xs text-[#A8BBC0] mt-1 leading-relaxed">{ach.description}</p>
                 </div>
 
-                <div className="pt-2 border-t border-border flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                <div className="pt-2 border-t border-[#294149] flex items-center justify-between text-[10px] font-mono text-[#A8BBC0]">
                   <span>Categoria: {ach.category}</span>
                   {ach.earned ? (
-                    <span className="text-[#1D957A] font-semibold">Obtido em {ach.earnedAt}</span>
+                    <span className="text-[#01B59A] font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Conquistada
+                    </span>
                   ) : (
-                    <span>Bloqueado</span>
+                    <span>
+                      Requer {ach.conditionThreshold} {ach.conditionType.replace('_', ' ')}
+                    </span>
                   )}
                 </div>
               </CardContent>
