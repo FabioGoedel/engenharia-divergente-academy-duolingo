@@ -38,8 +38,9 @@ import { runPhase3AutomatedTests, Phase3TestReport } from '@/lib/phase3TestRunne
 export const ActivityPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, authMode, refreshUser } = useAuth()
   const { toast } = useToast()
+  const isRealMode = authMode === 'real' && Boolean(user?.id && !user.id.startsWith('demo-'))
 
   const [mission, setMission] = useState<ActivityMissionDefinition | null>(null)
   const [exercises, setExercises] = useState<ActivityExerciseStudentPayload[]>([])
@@ -58,6 +59,7 @@ export const ActivityPlayerPage: React.FC = () => {
   // Metadados pedagógicos pós-resposta
   const [perceivedDifficulty, setPerceivedDifficulty] = useState<1 | 2 | 3 | 4 | 5 | null>(null)
   const [guessed, setGuessed] = useState(false)
+  const [activeSeconds, setActiveSeconds] = useState<number>(0)
 
   // Painel de Testes Automatizados (Critério 10)
   const [showTestsModal, setShowTestsModal] = useState(false)
@@ -116,7 +118,11 @@ export const ActivityPlayerPage: React.FC = () => {
 
         // Inicia ou retoma a tentativa
         const currentUserId = user?.id || 'demo-student-user'
-        const prog = await ActivityService.startOrResumeAttempt(missionDef.id, currentUserId)
+        const prog = await ActivityService.startOrResumeAttempt(
+          missionDef.id,
+          currentUserId,
+          isRealMode,
+        )
         setProgress(prog)
         setCurrentIndex(prog.currentExerciseIndex || 0)
 
@@ -141,7 +147,33 @@ export const ActivityPlayerPage: React.FC = () => {
     }
 
     init()
-  }, [id, user?.id])
+  }, [id, user?.id, isRealMode])
+
+  // Rastreia tempo ATIVO (distingue de aba em segundo plano / visibilidade)
+  useEffect(() => {
+    let interval: any = null
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(interval)
+      } else {
+        interval = setInterval(() => {
+          setActiveSeconds((prev) => prev + 1)
+        }, 1000)
+      }
+    }
+
+    if (!document.hidden) {
+      interval = setInterval(() => {
+        setActiveSeconds((prev) => prev + 1)
+      }, 1000)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   // Limpa campos ao mudar de exercício
   const handleSelectExerciseIndex = async (index: number) => {
@@ -167,7 +199,7 @@ export const ActivityPlayerPage: React.FC = () => {
       setHintsRevealed(prior.submission.hintsUsedCount || 0)
     }
 
-    await ActivityService.setExerciseIndex(progress.attemptId, index)
+    await ActivityService.setExerciseIndex(progress.attemptId, index, isRealMode)
   }
 
   // Recebe valor transferido da calculadora técnica
@@ -233,12 +265,21 @@ export const ActivityPlayerPage: React.FC = () => {
           hintsUsedCount: hintsRevealed,
           perceivedDifficulty: perceivedDifficulty || undefined,
           guessed,
+          elapsedSeconds: activeSeconds,
         },
         user?.id || 'demo-student-user',
+        isRealMode,
+        {
+          activeSeconds,
+          formulaWasHidden: false,
+        },
       )
 
       setLastGrade(outcome.gradeResult)
       setProgress(outcome.updatedProgress)
+      if (isRealMode) {
+        refreshUser()
+      }
 
       if (outcome.gradeResult.isCorrect) {
         toast({
@@ -275,8 +316,17 @@ export const ActivityPlayerPage: React.FC = () => {
   const handleRestartMission = async () => {
     if (!mission) return
     const currentUserId = user?.id || 'demo-student-user'
-    const newProg = await ActivityService.resetAttempt(mission.id, currentUserId)
-    setProgress(newProg)
+    let freshProgress: ActivityMissionProgress
+    if (isRealMode) {
+      const { LearningPersistenceService } = await import('@/services/learningPersistenceService')
+      freshProgress = await LearningPersistenceService.startOrResumeAttempt(
+        mission.id,
+        currentUserId,
+      )
+    } else {
+      freshProgress = await ActivityService.resetAttempt(mission.id, currentUserId)
+    }
+    setProgress(freshProgress)
     setCurrentIndex(0)
     setSelectedOptionId(null)
     setNumericInput('')
@@ -333,7 +383,7 @@ export const ActivityPlayerPage: React.FC = () => {
               variant="outline"
               className="text-[10px] border-[#01B59A]/40 text-[#01B59A] font-mono"
             >
-              Missão Ativa
+              {isRealMode ? 'Supabase Real • Modo Seguro' : 'Demo Local • Isolado'}
             </Badge>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">

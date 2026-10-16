@@ -1,5 +1,19 @@
-import React from 'react'
-import { TrendingUp, Clock, CheckCircle2, Brain, History, AlertCircle } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import {
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  Brain,
+  History,
+  AlertCircle,
+  Award,
+  Calendar,
+} from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  LearningPersistenceService,
+  StudentDashboardMetrics,
+} from '@/services/learningPersistenceService'
 import {
   BarChart,
   Bar,
@@ -22,6 +36,18 @@ import {
 } from '@/data/demoData'
 
 export default function ProgressPage() {
+  const { user, authMode } = useAuth()
+  const isReal = authMode === 'real' && Boolean(user?.id && !user.id.startsWith('demo-'))
+  const [realMetrics, setRealMetrics] = useState<StudentDashboardMetrics | null>(null)
+
+  useEffect(() => {
+    if (isReal && user?.id) {
+      LearningPersistenceService.getStudentLearningMetrics(user.id)
+        .then(setRealMetrics)
+        .catch(console.warn)
+    }
+  }, [isReal, user?.id])
+
   return (
     <div className="space-y-8">
       {/* Cabeçalho */}
@@ -34,25 +60,75 @@ export default function ProgressPage() {
           Progresso & Horas Ativas
         </h1>
         <p className="text-xs md:text-sm text-muted-foreground">
-          Estimativa de dedicação semanal, competências avaliadas e histórico de sessões.
+          Dedicação, telemetria ativa, competências e ciclo de revisão espaçada.
         </p>
       </div>
+
+      {/* Indicadores Reais do Aluno (Subfase 4.2) */}
+      {isReal && realMetrics && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card className="bg-[#152228] border-[#294149]">
+            <CardContent className="p-4 space-y-1">
+              <span className="text-[10px] uppercase font-mono text-[#A8BBC0] block">
+                XP Transacional
+              </span>
+              <span className="text-xl font-bold font-mono text-[#01B59A]">
+                {realMetrics.totalXp} XP
+              </span>
+              <span className="text-[10px] text-[#A8BBC0] block">Auditado via Ledger</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#152228] border-[#294149]">
+            <CardContent className="p-4 space-y-1">
+              <span className="text-[10px] uppercase font-mono text-[#A8BBC0] block">
+                Tempo Ativo
+              </span>
+              <span className="text-xl font-bold font-mono text-white">
+                {Math.round(realMetrics.totalActiveSeconds / 60)} min
+              </span>
+              <span className="text-[10px] text-[#A8BBC0] block">Distingue foco de idle</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#152228] border-[#294149]">
+            <CardContent className="p-4 space-y-1">
+              <span className="text-[10px] uppercase font-mono text-[#A8BBC0] block">
+                Missões Concluídas
+              </span>
+              <span className="text-xl font-bold font-mono text-white">
+                {realMetrics.completedMissionsCount}
+              </span>
+              <span className="text-[10px] text-[#A8BBC0] block">Registradas no backend</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#152228] border-[#294149]">
+            <CardContent className="p-4 space-y-1">
+              <span className="text-[10px] uppercase font-mono text-[#A8BBC0] block">
+                Revisões Espaçadas
+              </span>
+              <span className="text-xl font-bold font-mono text-[#C69B4B]">
+                {realMetrics.pendingReviewsCount} pendentes
+              </span>
+              <span className="text-[10px] text-[#A8BBC0] block">Ciclos 1/3/7/14 dias</span>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Banner de Conformidade */}
       <div className="p-3.5 rounded-xl border border-border bg-card text-xs flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-muted-foreground">
           <AlertCircle className="h-4 w-4 text-[#C69B4B] shrink-0" />
           <span>
-            As horas ativas são calculadas por telemetria de sessão (
-            <strong className="text-foreground">marcado como estimativa</strong>). Dados
-            demonstrativos identificados.
+            {isReal
+              ? 'Conectado ao backend Supabase real. Ledger imutável de XP e telemetria atômica ativos.'
+              : 'Modo demonstrativo local isolado. As horas ativas são calculadas por estimativa.'}
           </span>
         </div>
         <Badge
           variant="outline"
           className="font-mono text-[10px] text-primary border-primary/30 shrink-0"
         >
-          Total acumulado: 110.6h
+          {isReal ? 'Ambiente Real • Supabase' : 'Ambiente Demo Sandbox'}
         </Badge>
       </div>
 

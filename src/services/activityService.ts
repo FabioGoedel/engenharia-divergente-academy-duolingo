@@ -23,6 +23,7 @@ import {
   CanonicalMissionExercise,
 } from '@/data/beamBendingMissionData'
 import { parseBrazilianNumericInput } from '@/schemas/canonicalSchemas'
+import { LearningPersistenceService } from '@/services/learningPersistenceService'
 
 const ATTEMPTS_STORAGE_KEY = 'academy_demo_activity_attempts'
 const XP_LEDGER_STORAGE_KEY = 'academy_demo_xp_ledger'
@@ -34,7 +35,7 @@ interface XpLedgerEntry {
   xpAmount: number
   userId: string
   createdAt: string
-  isDemo: true
+  isDemo: boolean
 }
 
 function getStoredAttempts(): Record<string, ActivityMissionProgress> {
@@ -100,7 +101,19 @@ export const ActivityService = {
    * Inicia ou retoma uma tentativa de missão para o usuário.
    * Gera um attempt_id único se não existir tentativa ativa em andamento.
    */
-  async startOrResumeAttempt(missionId: string, userId: string): Promise<ActivityMissionProgress> {
+  async startOrResumeAttempt(
+    missionId: string,
+    userId: string,
+    isRealMode = false,
+  ): Promise<ActivityMissionProgress> {
+    if (isRealMode && userId && !userId.startsWith('demo-')) {
+      try {
+        return await LearningPersistenceService.startOrResumeAttempt(missionId, userId)
+      } catch (err) {
+        console.warn('Falha na persistência real do Supabase, caindo para sandbox local:', err)
+      }
+    }
+
     const attempts = getStoredAttempts()
 
     // Procura tentativa recente não concluída para o usuário e missão
@@ -149,11 +162,38 @@ export const ActivityService = {
   async submitExerciseAnswer(
     submission: ExerciseSubmission,
     userId: string,
+    isRealMode = false,
+    options?: { activeSeconds?: number; formulaWasHidden?: boolean },
   ): Promise<{
     gradeResult: ExerciseGradeResult
     updatedProgress: ActivityMissionProgress
     xpAwardedInThisAction: number
   }> {
+    // Se o usuário está autenticado no Supabase real (não é demo), envia para o servidor via Edge Function
+    if (isRealMode && userId && !userId.startsWith('demo-')) {
+      try {
+        const edgeResult = await LearningPersistenceService.submitAnswerToEdgeFunction(
+          submission,
+          options?.activeSeconds || 0,
+          options?.formulaWasHidden || false,
+        )
+
+        // Atualiza e retorna o progresso atualizado do Supabase
+        const updatedProgress = await LearningPersistenceService.startOrResumeAttempt(
+          BEAM_BENDING_MISSION.id,
+          userId,
+        )
+
+        return {
+          gradeResult: edgeResult.gradeResult,
+          updatedProgress,
+          xpAwardedInThisAction: edgeResult.xpAwardedInThisAction,
+        }
+      } catch (edgeErr) {
+        console.warn('Erro ao avaliar via Edge Function, caindo para fallback canônico:', edgeErr)
+      }
+    }
+
     const { attemptId, exerciseId, studentAnswer, hintsUsedCount } = submission
 
     const canonicalItem: CanonicalMissionExercise | undefined = BEAM_BENDING_EXERCISES.find(
@@ -293,7 +333,16 @@ export const ActivityService = {
   /**
    * Avança o índice do exercício na tentativa
    */
-  async setExerciseIndex(attemptId: string, index: number): Promise<ActivityMissionProgress> {
+  async setExerciseIndex(
+    attemptId: string,
+    index: number,
+    isRealMode = false,
+  ): Promise<ActivityMissionProgress | void> {
+    if (isRealMode && !attemptId.startsWith('att-')) {
+      await LearningPersistenceService.updateAttemptState(attemptId, index)
+      return
+    }
+
     const attempts = getStoredAttempts()
     const progress = attempts[attemptId]
     if (progress) {

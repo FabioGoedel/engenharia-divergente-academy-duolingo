@@ -70,7 +70,7 @@ export interface ActivityMissionDefinition {
   estimatedMinutes: number
   totalXpReward: number
   editorialStatus: EditorialStatus
-  isDemo: true
+  isDemo?: boolean
 }
 
 export interface ExerciseSubmission {
@@ -121,5 +121,5 @@ export interface ActivityMissionProgress {
       gradedAt: string
     }
   >
-  isDemo: true
+  isDemo?: boolean
 }

@@ -9,16 +9,981 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: Database['public']['Enums']['audit_action_type']
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          ip_address: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: Database['public']['Enums']['audit_action_type']
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          ip_address?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: Database['public']['Enums']['audit_action_type']
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          ip_address?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_actor_id_fkey'
+            columns: ['actor_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'audit_logs_target_user_id_fkey'
+            columns: ['target_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      block_track_references: {
+        Row: {
+          block_id: string
+          created_at: string
+          id: string
+          module_id: string
+          product_id: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          id?: string
+          module_id: string
+          product_id: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          id?: string
+          module_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'block_track_references_block_id_fkey'
+            columns: ['block_id']
+            isOneToOne: false
+            referencedRelation: 'content_blocks'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'block_track_references_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      block_versions: {
+        Row: {
+          block_id: string
+          id: string
+          published_at: string
+          published_by: string | null
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          block_id: string
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          block_id?: string
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'block_versions_block_id_fkey'
+            columns: ['block_id']
+            isOneToOne: false
+            referencedRelation: 'content_blocks'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'block_versions_published_by_fkey'
+            columns: ['published_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      certificates: {
+        Row: {
+          code: string
+          grade_score: number | null
+          id: string
+          issued_at: string
+          product_id: string
+          user_id: string
+          verification_hash: string
+        }
+        Insert: {
+          code: string
+          grade_score?: number | null
+          id?: string
+          issued_at?: string
+          product_id: string
+          user_id: string
+          verification_hash: string
+        }
+        Update: {
+          code?: string
+          grade_score?: number | null
+          id?: string
+          issued_at?: string
+          product_id?: string
+          user_id?: string
+          verification_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'certificates_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'certificates_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      content_blocks: {
+        Row: {
+          block_type: string
+          category: Database['public']['Enums']['block_category']
+          completion_policy: Database['public']['Enums']['block_completion_policy']
+          config_json: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          editorial_status: Database['public']['Enums']['editorial_status']
+          id: string
+          referenced_media_id: string | null
+          referenced_question_id: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          block_type: string
+          category: Database['public']['Enums']['block_category']
+          completion_policy?: Database['public']['Enums']['block_completion_policy']
+          config_json: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          editorial_status?: Database['public']['Enums']['editorial_status']
+          id?: string
+          referenced_media_id?: string | null
+          referenced_question_id?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          block_type?: string
+          category?: Database['public']['Enums']['block_category']
+          completion_policy?: Database['public']['Enums']['block_completion_policy']
+          config_json?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          editorial_status?: Database['public']['Enums']['editorial_status']
+          id?: string
+          referenced_media_id?: string | null
+          referenced_question_id?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'content_blocks_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'content_blocks_referenced_media_id_fkey'
+            columns: ['referenced_media_id']
+            isOneToOne: false
+            referencedRelation: 'media_assets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'content_blocks_referenced_question_id_fkey'
+            columns: ['referenced_question_id']
+            isOneToOne: false
+            referencedRelation: 'question_bank'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      editorial_review_queue: {
+        Row: {
+          assigned_reviewer: string | null
+          created_at: string
+          current_status: Database['public']['Enums']['editorial_status']
+          decided_at: string | null
+          decision_notes: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          requested_by: string | null
+        }
+        Insert: {
+          assigned_reviewer?: string | null
+          created_at?: string
+          current_status: Database['public']['Enums']['editorial_status']
+          decided_at?: string | null
+          decision_notes?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          requested_by?: string | null
+        }
+        Update: {
+          assigned_reviewer?: string | null
+          created_at?: string
+          current_status?: Database['public']['Enums']['editorial_status']
+          decided_at?: string | null
+          decision_notes?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          requested_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'editorial_review_queue_assigned_reviewer_fkey'
+            columns: ['assigned_reviewer']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'editorial_review_queue_requested_by_fkey'
+            columns: ['requested_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      enrollments: {
+        Row: {
+          completed_at: string | null
+          id: string
+          product_id: string
+          progress_percent: number
+          started_at: string
+          status: Database['public']['Enums']['enrollment_status']
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          product_id: string
+          progress_percent?: number
+          started_at?: string
+          status?: Database['public']['Enums']['enrollment_status']
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          product_id?: string
+          progress_percent?: number
+          started_at?: string
+          status?: Database['public']['Enums']['enrollment_status']
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'enrollments_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'enrollments_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      entitlements: {
+        Row: {
+          granted_by_order_id: string | null
+          granted_by_subscription_id: string | null
+          id: string
+          is_active: boolean
+          product_id: string
+          user_id: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          granted_by_order_id?: string | null
+          granted_by_subscription_id?: string | null
+          id?: string
+          is_active?: boolean
+          product_id: string
+          user_id: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          granted_by_order_id?: string | null
+          granted_by_subscription_id?: string | null
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          user_id?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'entitlements_granted_by_order_id_fkey'
+            columns: ['granted_by_order_id']
+            isOneToOne: false
+            referencedRelation: 'orders'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'entitlements_granted_by_subscription_id_fkey'
+            columns: ['granted_by_subscription_id']
+            isOneToOne: false
+            referencedRelation: 'subscriptions'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'entitlements_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'entitlements_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      media_assets: {
+        Row: {
+          access_rules: Json | null
+          asset_type: Database['public']['Enums']['media_asset_type']
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_seconds: number | null
+          external_id: string
+          file_size_bytes: number | null
+          id: string
+          is_pending_storage: boolean | null
+          license_info: string | null
+          provider: Database['public']['Enums']['media_storage_provider']
+          public_url: string
+          related_product_id: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          transcript_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_rules?: Json | null
+          asset_type: Database['public']['Enums']['media_asset_type']
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          external_id: string
+          file_size_bytes?: number | null
+          id?: string
+          is_pending_storage?: boolean | null
+          license_info?: string | null
+          provider?: Database['public']['Enums']['media_storage_provider']
+          public_url: string
+          related_product_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_rules?: Json | null
+          asset_type?: Database['public']['Enums']['media_asset_type']
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          external_id?: string
+          file_size_bytes?: number | null
+          id?: string
+          is_pending_storage?: boolean | null
+          license_info?: string | null
+          provider?: Database['public']['Enums']['media_storage_provider']
+          public_url?: string
+          related_product_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'media_assets_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'media_assets_related_product_id_fkey'
+            columns: ['related_product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          status: string
+          total_cents: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string
+          total_cents: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string
+          total_cents?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'orders_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          id: string
+          order_id: string
+          paid_amount_cents: number
+          paid_at: string | null
+          provider: string
+          provider_tx_id: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          paid_amount_cents: number
+          paid_at?: string | null
+          provider?: string
+          provider_tx_id?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          paid_amount_cents?: number
+          paid_at?: string | null
+          provider?: string
+          provider_tx_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'payments_order_id_fkey'
+            columns: ['order_id']
+            isOneToOne: false
+            referencedRelation: 'orders'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          interval_months: number
+          is_active: boolean
+          name: string
+          price_cents: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          interval_months?: number
+          is_active?: boolean
+          name: string
+          price_cents: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          interval_months?: number
+          is_active?: boolean
+          name?: string
+          price_cents?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          id: string
+          is_included_in_base_sub: boolean
+          is_published: boolean
+          slug: string
+          tier: Database['public']['Enums']['entitlement_tier']
+          title: string
+          workload_hours: number
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          id?: string
+          is_included_in_base_sub?: boolean
+          is_published?: boolean
+          slug: string
+          tier?: Database['public']['Enums']['entitlement_tier']
+          title: string
+          workload_hours?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_included_in_base_sub?: boolean
+          is_published?: boolean
+          slug?: string
+          tier?: Database['public']['Enums']['entitlement_tier']
+          title?: string
+          workload_hours?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          crea_number: string | null
+          created_at: string
+          email: string
+          full_name: string
+          headline: string | null
+          id: string
+          streak_days: number
+          total_xp: number
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          crea_number?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          headline?: string | null
+          id: string
+          streak_days?: number
+          total_xp?: number
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          crea_number?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          headline?: string | null
+          id?: string
+          streak_days?: number
+          total_xp?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      question_bank: {
+        Row: {
+          authoring_level: number
+          competency_code: string
+          created_at: string
+          created_by: string | null
+          editorial_status: Database['public']['Enums']['editorial_status']
+          estimated_seconds: number
+          explanation_markdown: string
+          external_id: string
+          hint: string | null
+          id: string
+          numeric_tolerance_abs: number | null
+          numeric_tolerance_rel: number | null
+          numeric_unit: string | null
+          options: Json | null
+          prerequisites: string[] | null
+          private_key_json: Json
+          prompt_markdown: string
+          question_type: Database['public']['Enums']['question_type']
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          subject_area: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          version: number
+          xp_reward: number
+        }
+        Insert: {
+          authoring_level: number
+          competency_code: string
+          created_at?: string
+          created_by?: string | null
+          editorial_status?: Database['public']['Enums']['editorial_status']
+          estimated_seconds?: number
+          explanation_markdown: string
+          external_id: string
+          hint?: string | null
+          id?: string
+          numeric_tolerance_abs?: number | null
+          numeric_tolerance_rel?: number | null
+          numeric_unit?: string | null
+          options?: Json | null
+          prerequisites?: string[] | null
+          private_key_json: Json
+          prompt_markdown: string
+          question_type: Database['public']['Enums']['question_type']
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject_area: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          version?: number
+          xp_reward?: number
+        }
+        Update: {
+          authoring_level?: number
+          competency_code?: string
+          created_at?: string
+          created_by?: string | null
+          editorial_status?: Database['public']['Enums']['editorial_status']
+          estimated_seconds?: number
+          explanation_markdown?: string
+          external_id?: string
+          hint?: string | null
+          id?: string
+          numeric_tolerance_abs?: number | null
+          numeric_tolerance_rel?: number | null
+          numeric_unit?: string | null
+          options?: Json | null
+          prerequisites?: string[] | null
+          private_key_json?: Json
+          prompt_markdown?: string
+          question_type?: Database['public']['Enums']['question_type']
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject_area?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          version?: number
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'question_bank_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'question_bank_reviewed_by_fkey'
+            columns: ['reviewed_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      question_versions: {
+        Row: {
+          id: string
+          published_at: string
+          published_by: string | null
+          question_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          question_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          question_id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'question_versions_published_by_fkey'
+            columns: ['published_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'question_versions_question_id_fkey'
+            columns: ['question_id']
+            isOneToOne: false
+            referencedRelation: 'question_bank'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          description: string | null
+          id: string
+          permission_code: string
+          role: Database['public']['Enums']['user_role_type']
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          permission_code: string
+          role: Database['public']['Enums']['user_role_type']
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          permission_code?: string
+          role?: Database['public']['Enums']['user_role_type']
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          plan_id: string
+          status: Database['public']['Enums']['subscription_status']
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end: string
+          current_period_start: string
+          id?: string
+          plan_id: string
+          status?: Database['public']['Enums']['subscription_status']
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id?: string
+          status?: Database['public']['Enums']['subscription_status']
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'subscriptions_plan_id_fkey'
+            columns: ['plan_id']
+            isOneToOne: false
+            referencedRelation: 'plans'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'subscriptions_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          role: Database['public']['Enums']['user_role_type']
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role?: Database['public']['Enums']['user_role_type']
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role?: Database['public']['Enums']['user_role_type']
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_roles_assigned_by_fkey'
+            columns: ['assigned_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'user_roles_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_assign_role: {
+        Args: {
+          p_new_role: Database['public']['Enums']['user_role_type']
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
+      admin_revoke_role: {
+        Args: {
+          p_role_to_revoke: Database['public']['Enums']['user_role_type']
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
+      can_edit_content: { Args: { user_uid: string }; Returns: boolean }
+      has_entitlement: {
+        Args: { prod_id: string; user_uid: string }
+        Returns: boolean
+      }
+      is_admin: { Args: { user_uid: string }; Returns: boolean }
+      is_super_admin: { Args: { user_uid: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      audit_action_type:
+        | 'role_assigned'
+        | 'role_revoked'
+        | 'auth_success'
+        | 'auth_failure'
+        | 'privilege_escalation_attempt'
+        | 'profile_updated'
+      block_category: 'assessment' | 'media' | 'interaction' | 'flow' | 'marketing'
+      block_completion_policy: 'submitted' | 'watched' | 'checked' | 'manual' | 'composite'
+      editorial_status: 'draft' | 'in_review' | 'published' | 'archived'
+      enrollment_status: 'active' | 'completed' | 'suspended' | 'expired'
+      entitlement_tier: 'base_subscription' | 'technical_extension' | 'specialized_track'
+      media_asset_type: 'youtube_video' | 'private_video' | 'pdf_document' | 'audio' | 'image'
+      media_storage_provider: 'youtube' | 'cloudflare_stream' | 's3_storage' | 'external_url'
+      question_type:
+        | 'single_choice'
+        | 'multiple_choice'
+        | 'true_false'
+        | 'numeric_response'
+        | 'ordered_steps'
+      subscription_status: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete'
+      user_role_type: 'student' | 'content_editor' | 'admin' | 'super_admin'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -143,6 +1108,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      audit_action_type: [
+        'role_assigned',
+        'role_revoked',
+        'auth_success',
+        'auth_failure',
+        'privilege_escalation_attempt',
+        'profile_updated',
+      ],
+      block_category: ['assessment', 'media', 'interaction', 'flow', 'marketing'],
+      block_completion_policy: ['submitted', 'watched', 'checked', 'manual', 'composite'],
+      editorial_status: ['draft', 'in_review', 'published', 'archived'],
+      enrollment_status: ['active', 'completed', 'suspended', 'expired'],
+      entitlement_tier: ['base_subscription', 'technical_extension', 'specialized_track'],
+      media_asset_type: ['youtube_video', 'private_video', 'pdf_document', 'audio', 'image'],
+      media_storage_provider: ['youtube', 'cloudflare_stream', 's3_storage', 'external_url'],
+      question_type: [
+        'single_choice',
+        'multiple_choice',
+        'true_false',
+        'numeric_response',
+        'ordered_steps',
+      ],
+      subscription_status: ['active', 'past_due', 'canceled', 'trialing', 'incomplete'],
+      user_role_type: ['student', 'content_editor', 'admin', 'super_admin'],
+    },
   },
 } as const
