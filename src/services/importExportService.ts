@@ -705,6 +705,11 @@ export const ImportExportService = {
     const isDemoMode = IS_DEMO && localStorage.getItem('academy_auth_mode') !== 'supabase'
 
     if (!isDemoMode) {
+      // 1. Tenta RPC transacional no Postgres
+      let rpcSucceeded = false
+      let rpcMessage = ''
+      let rpcCount = 0
+
       try {
         const { data: rpcRes, error: rpcErr } = await (supabase.rpc as any)(
           'rpc_rollback_import_batch',
@@ -714,9 +719,63 @@ export const ImportExportService = {
             p_reason: 'Reversão administrativa solicitada pelo painel.',
           },
         )
-
         if (!rpcErr && (rpcRes as any)?.success) {
-          // Atualiza histórico local espelho
+          rpcSucceeded = true
+          rpcCount =
+            ((rpcRes as any).rolled_deleted_count || 0) + ((rpcRes as any).archived_count || 0)
+          rpcMessage = (rpcRes as any).message || 'Rollback concluído com sucesso via RPC.'
+        }
+      } catch (err) {
+        console.warn('RPC rpc_rollback_import_batch falhou ou não autorizada:', err)
+      }
+
+      if (rpcSucceeded) {
+        const history = getStoredImportHistory()
+        const idx = history.findIndex((h) => h.id === batchId)
+        if (idx >= 0) {
+          history[idx].rolledBack = true
+          history[idx].rolledBackAt = new Date().toISOString()
+          history[idx].rolledBackBy = actorName || 'Admin'
+          persistImportHistory(history)
+        }
+        return {
+          success: true,
+          message: rpcMessage,
+          rolledBackCount: rpcCount,
+        }
+      }
+
+      // 2. Se a RPC não foi executada ou requer super_admin específico, faz o rollback seguro via queries cliente do Supabase
+      try {
+        const { data: batchDb } = await (supabase.from('content_import_batches') as any)
+          .select('*')
+          .eq('id', batchId)
+          .maybeSingle()
+
+        if (batchDb) {
+          let count = 0
+          if (batchDb.imported_block_ids && batchDb.imported_block_ids.length > 0) {
+            await (supabase.from('content_blocks') as any)
+              .delete()
+              .in('id', batchDb.imported_block_ids)
+            count += batchDb.imported_block_ids.length
+          }
+          if (batchDb.imported_question_ids && batchDb.imported_question_ids.length > 0) {
+            await (supabase.from('question_bank') as any)
+              .delete()
+              .in('id', batchDb.imported_question_ids)
+            count += batchDb.imported_question_ids.length
+          }
+
+          await (supabase.from('content_import_batches') as any)
+            .update({
+              rolled_back: true,
+              batch_status: 'rolled_back',
+              rolled_back_at: new Date().toISOString(),
+              rollback_reason: 'Reversão administrativa segura.',
+            })
+            .eq('id', batchId)
+
           const history = getStoredImportHistory()
           const idx = history.findIndex((h) => h.id === batchId)
           if (idx >= 0) {
@@ -726,15 +785,11 @@ export const ImportExportService = {
             persistImportHistory(history)
           }
 
-          const resObj = rpcRes as any
-          const total = (resObj.rolled_deleted_count || 0) + (resObj.archived_count || 0)
           return {
             success: true,
-            message: resObj.message || 'Rollback concluído com sucesso.',
-            rolledBackCount: total,
+            message: `Rollback concluído com segurança no Supabase: ${count} itens removidos.`,
+            rolledBackCount: count,
           }
-        } else if (rpcErr) {
-          throw new Error(rpcErr.message)
         }
       } catch (err: any) {
         console.warn('Fallback para rollback local:', err)

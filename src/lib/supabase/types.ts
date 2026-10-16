@@ -19,9 +19,12 @@ export type Database = {
           id: string
           metadata: Json
           mission_id: string
+          node_id: string | null
           started_at: string
           status: Database['public']['Enums']['attempt_status']
           total_xp_awarded: number
+          track_id: string | null
+          track_version: number | null
           user_id: string
         }
         Insert: {
@@ -33,9 +36,12 @@ export type Database = {
           id?: string
           metadata?: Json
           mission_id: string
+          node_id?: string | null
           started_at?: string
           status?: Database['public']['Enums']['attempt_status']
           total_xp_awarded?: number
+          track_id?: string | null
+          track_version?: number | null
           user_id: string
         }
         Update: {
@@ -47,9 +53,12 @@ export type Database = {
           id?: string
           metadata?: Json
           mission_id?: string
+          node_id?: string | null
           started_at?: string
           status?: Database['public']['Enums']['attempt_status']
           total_xp_awarded?: number
+          track_id?: string | null
+          track_version?: number | null
           user_id?: string
         }
         Relationships: [
@@ -420,6 +429,8 @@ export type Database = {
       }
       content_blocks: {
         Row: {
+          associated_competencies: string[] | null
+          author: string | null
           block_type: string
           category: Database['public']['Enums']['block_category']
           completion_policy: Database['public']['Enums']['block_completion_policy']
@@ -428,15 +439,23 @@ export type Database = {
           created_by: string | null
           description: string | null
           editorial_status: Database['public']['Enums']['editorial_status']
+          estimated_minutes: number | null
           id: string
+          import_batch_id: string | null
+          initial_difficulty: number | null
+          media_references: Json | null
           referenced_media_id: string | null
           referenced_question_id: string | null
+          revision: number | null
+          subject_area: string | null
           tags: string[] | null
           title: string
           updated_at: string
           version: number
         }
         Insert: {
+          associated_competencies?: string[] | null
+          author?: string | null
           block_type: string
           category: Database['public']['Enums']['block_category']
           completion_policy?: Database['public']['Enums']['block_completion_policy']
@@ -445,15 +464,23 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           editorial_status?: Database['public']['Enums']['editorial_status']
+          estimated_minutes?: number | null
           id?: string
+          import_batch_id?: string | null
+          initial_difficulty?: number | null
+          media_references?: Json | null
           referenced_media_id?: string | null
           referenced_question_id?: string | null
+          revision?: number | null
+          subject_area?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
           version?: number
         }
         Update: {
+          associated_competencies?: string[] | null
+          author?: string | null
           block_type?: string
           category?: Database['public']['Enums']['block_category']
           completion_policy?: Database['public']['Enums']['block_completion_policy']
@@ -462,9 +489,15 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           editorial_status?: Database['public']['Enums']['editorial_status']
+          estimated_minutes?: number | null
           id?: string
+          import_batch_id?: string | null
+          initial_difficulty?: number | null
+          media_references?: Json | null
           referenced_media_id?: string | null
           referenced_question_id?: string | null
+          revision?: number | null
+          subject_area?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
@@ -497,6 +530,93 @@ export type Database = {
             columns: ['referenced_question_id']
             isOneToOne: false
             referencedRelation: 'view_student_question_bank'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      content_import_batches: {
+        Row: {
+          batch_status: string
+          created_at: string
+          execution_errors: Json | null
+          failed_count: number
+          file_name: string
+          file_size_bytes: number | null
+          format_detected: string
+          id: string
+          imported_block_ids: string[] | null
+          imported_blocks_count: number
+          imported_by_id: string | null
+          imported_by_name: string | null
+          imported_question_ids: string[] | null
+          imported_questions_count: number
+          rollback_reason: string | null
+          rolled_back: boolean
+          rolled_back_at: string | null
+          rolled_back_by_id: string | null
+          rolled_back_by_name: string | null
+          skipped_count: number
+          total_items: number
+        }
+        Insert: {
+          batch_status?: string
+          created_at?: string
+          execution_errors?: Json | null
+          failed_count?: number
+          file_name: string
+          file_size_bytes?: number | null
+          format_detected: string
+          id: string
+          imported_block_ids?: string[] | null
+          imported_blocks_count?: number
+          imported_by_id?: string | null
+          imported_by_name?: string | null
+          imported_question_ids?: string[] | null
+          imported_questions_count?: number
+          rollback_reason?: string | null
+          rolled_back?: boolean
+          rolled_back_at?: string | null
+          rolled_back_by_id?: string | null
+          rolled_back_by_name?: string | null
+          skipped_count?: number
+          total_items?: number
+        }
+        Update: {
+          batch_status?: string
+          created_at?: string
+          execution_errors?: Json | null
+          failed_count?: number
+          file_name?: string
+          file_size_bytes?: number | null
+          format_detected?: string
+          id?: string
+          imported_block_ids?: string[] | null
+          imported_blocks_count?: number
+          imported_by_id?: string | null
+          imported_by_name?: string | null
+          imported_question_ids?: string[] | null
+          imported_questions_count?: number
+          rollback_reason?: string | null
+          rolled_back?: boolean
+          rolled_back_at?: string | null
+          rolled_back_by_id?: string | null
+          rolled_back_by_name?: string | null
+          skipped_count?: number
+          total_items?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'content_import_batches_imported_by_id_fkey'
+            columns: ['imported_by_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'content_import_batches_rolled_back_by_id_fkey'
+            columns: ['rolled_back_by_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
             referencedColumns: ['id']
           },
         ]
@@ -933,6 +1053,7 @@ export type Database = {
           external_id: string
           hint: string | null
           id: string
+          import_batch_id: string | null
           numeric_tolerance_abs: number | null
           numeric_tolerance_rel: number | null
           numeric_unit: string | null
@@ -944,6 +1065,7 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          revision: number | null
           subject_area: string
           tags: string[] | null
           title: string
@@ -962,6 +1084,7 @@ export type Database = {
           external_id: string
           hint?: string | null
           id?: string
+          import_batch_id?: string | null
           numeric_tolerance_abs?: number | null
           numeric_tolerance_rel?: number | null
           numeric_unit?: string | null
@@ -973,6 +1096,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number | null
           subject_area: string
           tags?: string[] | null
           title: string
@@ -991,6 +1115,7 @@ export type Database = {
           external_id?: string
           hint?: string | null
           id?: string
+          import_batch_id?: string | null
           numeric_tolerance_abs?: number | null
           numeric_tolerance_rel?: number | null
           numeric_unit?: string | null
@@ -1002,6 +1127,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number | null
           subject_area?: string
           tags?: string[] | null
           title?: string
@@ -1156,9 +1282,12 @@ export type Database = {
           last_activity_at: string
           last_attempt_id: string | null
           mission_id: string
+          node_id: string | null
           total_active_seconds: number
           total_attempts_count: number
           total_xp_earned: number
+          track_id: string | null
+          track_version: number | null
           user_id: string
         }
         Insert: {
@@ -1170,9 +1299,12 @@ export type Database = {
           last_activity_at?: string
           last_attempt_id?: string | null
           mission_id: string
+          node_id?: string | null
           total_active_seconds?: number
           total_attempts_count?: number
           total_xp_earned?: number
+          track_id?: string | null
+          track_version?: number | null
           user_id: string
         }
         Update: {
@@ -1184,9 +1316,12 @@ export type Database = {
           last_activity_at?: string
           last_attempt_id?: string | null
           mission_id?: string
+          node_id?: string | null
           total_active_seconds?: number
           total_attempts_count?: number
           total_xp_earned?: number
+          track_id?: string | null
+          track_version?: number | null
           user_id?: string
         }
         Relationships: [
@@ -1295,6 +1430,133 @@ export type Database = {
           {
             foreignKeyName: 'subscriptions_user_id_fkey'
             columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      trail_graph_versions: {
+        Row: {
+          block_version_manifest: Json
+          changelog: string | null
+          created_at: string
+          edges_snapshot: Json
+          graph_snapshot: Json
+          id: string
+          nodes_snapshot: Json
+          published_at: string
+          published_by_id: string | null
+          published_by_name: string | null
+          status: Database['public']['Enums']['editorial_status']
+          title: string
+          track_id: string
+          version: number
+        }
+        Insert: {
+          block_version_manifest?: Json
+          changelog?: string | null
+          created_at?: string
+          edges_snapshot: Json
+          graph_snapshot: Json
+          id: string
+          nodes_snapshot: Json
+          published_at?: string
+          published_by_id?: string | null
+          published_by_name?: string | null
+          status?: Database['public']['Enums']['editorial_status']
+          title: string
+          track_id: string
+          version: number
+        }
+        Update: {
+          block_version_manifest?: Json
+          changelog?: string | null
+          created_at?: string
+          edges_snapshot?: Json
+          graph_snapshot?: Json
+          id?: string
+          nodes_snapshot?: Json
+          published_at?: string
+          published_by_id?: string | null
+          published_by_name?: string | null
+          status?: Database['public']['Enums']['editorial_status']
+          title?: string
+          track_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'trail_graph_versions_published_by_id_fkey'
+            columns: ['published_by_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      trail_graphs: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          description: string | null
+          edges: Json
+          id: string
+          nodes: Json
+          published_at: string | null
+          published_by: string | null
+          published_version: number | null
+          revision: number
+          status: Database['public']['Enums']['editorial_status']
+          title: string
+          track_id: string
+          track_slug: string
+          unit_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id: string
+          nodes?: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_version?: number | null
+          revision?: number
+          status?: Database['public']['Enums']['editorial_status']
+          title: string
+          track_id: string
+          track_slug: string
+          unit_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id?: string
+          nodes?: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_version?: number | null
+          revision?: number
+          status?: Database['public']['Enums']['editorial_status']
+          title?: string
+          track_id?: string
+          track_slug?: string
+          unit_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'trail_graphs_author_id_fkey'
+            columns: ['author_id']
             isOneToOne: false
             referencedRelation: 'profiles'
             referencedColumns: ['id']
@@ -1483,6 +1745,34 @@ export type Database = {
           p_student_answer: Json
           p_xp_reason: string
           p_xp_to_award: number
+        }
+        Returns: Json
+      }
+      rpc_publish_question: {
+        Args: { p_question_id: string; p_reviewer_name: string }
+        Returns: Json
+      }
+      rpc_publish_trail_graph: {
+        Args: {
+          p_changelog: string
+          p_publisher_name: string
+          p_track_id: string
+        }
+        Returns: Json
+      }
+      rpc_rollback_import_batch: {
+        Args: { p_actor_name: string; p_batch_id: string; p_reason: string }
+        Returns: Json
+      }
+      rpc_save_trail_graph_draft: {
+        Args: {
+          p_description: string
+          p_edges: Json
+          p_expected_revision: number
+          p_nodes: Json
+          p_title: string
+          p_track_id: string
+          p_track_slug: string
         }
         Returns: Json
       }
